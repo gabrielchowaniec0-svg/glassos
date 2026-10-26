@@ -78,7 +78,7 @@ class LauncherSettings(context: Context) {
         private set
 
     /** How much the home screen darkens behind open panels (no blur is ever applied). */
-    var panelDim by mutableFloatStateOf(prefs.getFloat(KEY_PANEL_DIM, 0.22f))
+    var panelDim by mutableFloatStateOf(prefs.getFloat(KEY_PANEL_DIM, 0.32f))
         private set
 
     // ---- Home screen --------------------------------------------------------------------------

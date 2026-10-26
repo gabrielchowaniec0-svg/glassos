@@ -299,11 +299,13 @@ fun PanelOverlay(
     val progress: () -> Float = { controller.progress }
 
     Box(modifier = modifier.fillMaxSize()) {
+        val sheet = !isLarge && type == PanelType.Notifications
         // Dim only - the home screen underneath stays sharp and is refracted by the glass modules.
+        // The phone notification sheet brings its own frosted surface instead.
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .graphicsLayer { alpha = controller.progress }
+                .graphicsLayer { alpha = if (sheet) 0f else controller.progress }
                 .background(Color.Black.copy(alpha = settings.panelDim))
                 .pointerInput(Unit) { detectTapGestures { controller.close() } }
         )
@@ -346,14 +348,11 @@ fun PanelOverlay(
                     .padding(horizontal = 18.dp)
             )
         } else {
-            NotificationCenter(
+            NotificationSheet(
+                controller = controller,
                 system = system,
                 media = media,
-                progress = progress,
-                onClose = { controller.close() },
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 14.dp)
+                modifier = Modifier.fillMaxSize()
             )
         }
     }
@@ -1067,6 +1066,354 @@ fun NotificationCenter(
     }
 }
 
+// =============================================================================================
+// Notification sheet (phone): iOS Notification Center pull-down
+// =============================================================================================
+
+/** iOS-style dark frosted tint for notification cards inside the sheet. */
+private val SheetCardTint = Color(0xFF0B0B10).copy(alpha = 0.42f)
+
+/** Notifications newer than this count as "recent" and sit above the Notification Center header. */
+private const val RECENT_WINDOW_MS = 60 * 60 * 1000L
+
+/**
+ * A frosted liquid glass sheet that slides down from the top edge with the finger, like iOS. Its
+ * bottom edge is a refracting glass lip; content is laid out against that edge, so the shortcut bar
+ * and the newest cards appear first while pulling. Below the edge the home screen stays sharp.
+ */
+@Composable
+private fun NotificationSheet(
+    controller: PanelController,
+    system: SystemStateHolder,
+    media: MediaStateHolder,
+    modifier: Modifier = Modifier
+) {
+    val baseStyle = LocalGlassStyle.current
+    // Slight frost only inside the sheet (the home screen itself is never blurred).
+    val sheetStyle = remember(baseStyle) { baseStyle.copy(frost = maxOf(baseStyle.frost, 0.42f)) }
+
+    BoxWithConstraints(modifier = modifier) {
+        val heightPx = constraints.maxHeight.toFloat()
+        CompositionLocalProvider(LocalGlassStyle provides sheetStyle) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        translationY = -(1f - controller.progress) * heightPx
+                    }
+                    // Swallow taps on the sheet itself (taps below its edge close it).
+                    .pointerInput(Unit) { detectTapGestures { } }
+            ) {
+                GlassSurface(
+                    modifier = Modifier.fillMaxSize(),
+                    cornerRadius = 46.dp,
+                    tint = Color.Black.copy(alpha = 0.16f)
+                )
+                NotificationSheetContent(
+                    system = system,
+                    media = media,
+                    progress = { controller.progress },
+                    onClose = { controller.close() },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun NotificationSheetContent(
+    system: SystemStateHolder,
+    media: MediaStateHolder,
+    progress: () -> Float,
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val notifications by NotificationRepository.items.collectAsState()
+    val now = remember(notifications) { System.currentTimeMillis() }
+    val groups = remember(notifications) {
+        notifications.groupBy { it.packageName }.values.toList()
+    }
+    val recent = groups.filter { now - it.first().postTime < RECENT_WINDOW_MS }
+    val older = groups.filter { now - it.first().postTime >= RECENT_WINDOW_MS }
+    var expanded by remember { mutableStateOf(setOf<String>()) }
+    val listState = rememberLazyListState()
+
+    val openNotification: (GlassNotification) -> Unit = { notification ->
+        sendNotification(notification)
+        onClose()
+    }
+
+    Column(
+        modifier = modifier
+            .padding(top = 40.dp)
+            .windowInsetsPadding(WindowInsets.navigationBars)
+    ) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .gestureExclusion { dy ->
+                    (dy < 0f && listState.canScrollForward) || (dy > 0f && listState.canScrollBackward)
+                },
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            item(key = "clock") {
+                LockScreenClock(modifier = Modifier.fillMaxWidth().sheetEntrance(progress, 0))
+            }
+
+            val nowPlaying = media.info
+            if (nowPlaying != null) {
+                item(key = "media") {
+                    NowPlayingCard(
+                        info = nowPlaying,
+                        media = media,
+                        system = system,
+                        tint = SheetCardTint,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .sheetEntrance(progress, 1)
+                    )
+                }
+            }
+
+            if (!system.notificationAccessGranted) {
+                item(key = "access") {
+                    GlassSurface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .sheetEntrance(progress, 2)
+                            .glassClickable(pressedScale = 1.03f) { system.openNotificationAccessSettings() },
+                        cornerRadius = 24.dp,
+                        tint = SheetCardTint
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            GlassLabel("Allow notification access", size = 16, weight = FontWeight.SemiBold)
+                            VerticalSpace(4.dp)
+                            GlassLabel(
+                                "Tap to let GlassOS show notifications and music here.",
+                                size = 13,
+                                alpha = 0.8f,
+                                maxLines = 2
+                            )
+                        }
+                    }
+                }
+            } else {
+                sheetGroups(
+                    groups = recent,
+                    keyPrefix = "recent",
+                    expanded = expanded,
+                    onExpandedChange = { expanded = it },
+                    progress = progress,
+                    firstIndex = 2,
+                    onOpen = openNotification
+                )
+
+                item(key = "nc_header") {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 6.dp, top = 8.dp, bottom = 2.dp)
+                            .sheetEntrance(progress, 2 + recent.size),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        GlassLabel(
+                            "Notification Center",
+                            size = 20,
+                            weight = FontWeight.Bold,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (notifications.any { it.clearable }) {
+                            GlassSurface(
+                                modifier = Modifier
+                                    .size(30.dp)
+                                    .glassClickable(pressedScale = 1.12f) { NotificationRepository.dismissAll() },
+                                cornerRadius = GlassCapsule,
+                                tint = SheetCardTint,
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Close,
+                                    contentDescription = "Clear all",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                if (older.isEmpty() && recent.isEmpty()) {
+                    item(key = "empty") {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            GlassLabel("No Older Notifications", size = 15, weight = FontWeight.SemiBold, alpha = 0.75f)
+                        }
+                    }
+                }
+
+                sheetGroups(
+                    groups = older,
+                    keyPrefix = "older",
+                    expanded = expanded,
+                    onExpandedChange = { expanded = it },
+                    progress = progress,
+                    firstIndex = 3 + recent.size,
+                    onOpen = openNotification
+                )
+            }
+        }
+
+        // Bottom bar riding on the sheet's glass edge: flashlight, focus, camera.
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 28.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            GlassRoundButton(
+                icon = Icons.Rounded.FlashlightOn,
+                contentDescription = "Flashlight",
+                size = 50.dp,
+                active = system.flashlightOn,
+                onClick = { system.toggleFlashlight() }
+            )
+            GlassSurface(
+                modifier = Modifier
+                    .height(36.dp)
+                    .glassClickable(onLongClick = { system.openDndAccessSettings() }) { system.toggleDnd() },
+                cornerRadius = GlassCapsule,
+                tint = if (system.dndOn) IosIndigo.copy(alpha = 0.75f) else SheetCardTint,
+                contentAlignment = Alignment.Center
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = if (system.dndOn) Icons.Rounded.DoNotDisturbOn else Icons.Rounded.DarkMode,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    GlassLabel(
+                        if (system.dndOn) "Do Not Disturb" else "Focus",
+                        size = 14,
+                        weight = FontWeight.SemiBold
+                    )
+                }
+            }
+            GlassRoundButton(
+                icon = Icons.Rounded.CameraAlt,
+                contentDescription = "Camera",
+                size = 50.dp,
+                onClick = {
+                    system.openCamera()
+                    onClose()
+                }
+            )
+        }
+    }
+}
+
+/** Groups of notifications as iOS stacks: collapsed groups show the newest card with slivers. */
+private fun androidx.compose.foundation.lazy.LazyListScope.sheetGroups(
+    groups: List<List<GlassNotification>>,
+    keyPrefix: String,
+    expanded: Set<String>,
+    onExpandedChange: (Set<String>) -> Unit,
+    progress: () -> Float,
+    firstIndex: Int,
+    onOpen: (GlassNotification) -> Unit
+) {
+    groups.forEachIndexed { groupIndex, group ->
+        val packageName = group.first().packageName
+        val isExpanded = packageName in expanded || group.size == 1
+        val entranceIndex = firstIndex + groupIndex
+        if (isExpanded) {
+            items(items = group, key = { "${keyPrefix}_${it.key}" }) { notification ->
+                SwipeToDismiss(
+                    enabled = notification.clearable,
+                    onDismiss = { NotificationRepository.dismiss(notification.key) },
+                    modifier = Modifier.sheetEntrance(progress, entranceIndex)
+                ) {
+                    NotificationCard(
+                        notification = notification,
+                        stackedBehind = 0,
+                        extraCount = 0,
+                        onClick = { onOpen(notification) },
+                        tint = SheetCardTint
+                    )
+                }
+            }
+            if (group.size > 1) {
+                item(key = "${keyPrefix}_less_$packageName") {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        GlassSurface(
+                            modifier = Modifier
+                                .height(28.dp)
+                                .glassClickable { onExpandedChange(expanded - packageName) },
+                            cornerRadius = GlassCapsule,
+                            tint = SheetCardTint,
+                            contentAlignment = Alignment.Center
+                        ) {
+                            GlassLabel(
+                                "Show less",
+                                size = 12,
+                                weight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(horizontal = 12.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        } else {
+            item(key = "${keyPrefix}_group_$packageName") {
+                SwipeToDismiss(
+                    enabled = group.any { it.clearable },
+                    onDismiss = { group.filter { it.clearable }.forEach { NotificationRepository.dismiss(it.key) } },
+                    modifier = Modifier.sheetEntrance(progress, entranceIndex)
+                ) {
+                    NotificationCard(
+                        notification = group.first(),
+                        stackedBehind = (group.size - 1).coerceAtMost(2),
+                        extraCount = group.size - 1,
+                        onClick = { onExpandedChange(expanded + packageName) },
+                        tint = SheetCardTint
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Cards settle onto the moving sheet with a soft staggered scale-in (the sheet itself provides the
+ * travel), echoing the bounce in iOS when Notification Center lands.
+ */
+private fun Modifier.sheetEntrance(progress: () -> Float, index: Int): Modifier = graphicsLayer {
+    val delay = (index * 0.05f).coerceAtMost(0.45f)
+    val p = ((progress() - delay) / (1f - delay)).coerceIn(0f, 1f)
+    val eased = 1f - (1f - p) * (1f - p) * (1f - p)
+    alpha = 0.35f + 0.65f * eased
+    val s = 0.93f + 0.07f * eased
+    scaleX = s
+    scaleY = s
+    transformOrigin = TransformOrigin(0.5f, 1f)
+}
+
 private fun sendNotification(notification: GlassNotification) {
     try {
         notification.contentIntent?.send()
@@ -1118,13 +1465,15 @@ private fun NowPlayingCard(
     info: MediaInfo,
     media: MediaStateHolder,
     system: SystemStateHolder,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    tint: Color = Color.Transparent
 ) {
     GlassSurface(
         modifier = modifier
             .height(84.dp)
             .glassClickable(pressedScale = 1.02f) { media.openPlayer(system) },
         cornerRadius = 28.dp,
+        tint = tint,
         contentAlignment = Alignment.CenterStart
     ) {
         Row(
@@ -1225,7 +1574,8 @@ private fun NotificationCard(
     notification: GlassNotification,
     stackedBehind: Int,
     extraCount: Int,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    tint: Color = Color.Transparent
 ) {
     val relativeTime = remember(notification.postTime) {
         DateUtils.getRelativeTimeSpanString(
@@ -1255,7 +1605,8 @@ private fun NotificationCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .glassClickable(pressedScale = 1.02f, onClick = onClick),
-            cornerRadius = 24.dp
+            cornerRadius = 24.dp,
+            tint = tint
         ) {
             Row(
                 modifier = Modifier.padding(14.dp),

@@ -1,10 +1,15 @@
 package com.glassos.launcher
 
 import android.Manifest
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -38,6 +43,23 @@ class MainActivity : ComponentActivity() {
     private lateinit var settings: LauncherSettings
     private lateinit var media: MediaStateHolder
     private lateinit var weather: WeatherHolder
+
+    private var lastCollapseAt = 0L
+    private var shadeReceiverRegistered = false
+
+    /**
+     * The system broadcasts ACTION_CLOSE_SYSTEM_DIALOGS (with a "reason" extra) when its shade or
+     * other system UI is involved. While GlassOS is in front we answer by collapsing the native shade,
+     * so top-edge swipes end up in GlassOS's own panels instead.
+     */
+    private val shadeReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            @Suppress("DEPRECATION")
+            if (intent.action == Intent.ACTION_CLOSE_SYSTEM_DIALOGS && intent.getStringExtra("reason") != null) {
+                collapseNativeShade()
+            }
+        }
+    }
 
     private val homePressFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private val homePressEvents: SharedFlow<Unit> = homePressFlow.asSharedFlow()
@@ -113,10 +135,12 @@ class MainActivity : ComponentActivity() {
         systemState.refreshPermissions()
         hingeSensorManager.start()
         if (systemState.notificationAccessGranted) media.start()
+        registerShadeReceiver()
         hideNativeStatusBar()
     }
 
     override fun onPause() {
+        unregisterShadeReceiver()
         media.stop()
         hingeSensorManager.stop()
         systemState.stop()
@@ -125,7 +149,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) hideNativeStatusBar()
+        if (hasFocus) {
+            hideNativeStatusBar()
+        } else if (lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) {
+            // Losing focus while still resumed usually means the native shade started to expand
+            // over the home screen (launching an app pauses us first, so it is not affected).
+            collapseNativeShade()
+        }
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -155,6 +185,53 @@ class MainActivity : ComponentActivity() {
             ViewCompat.onApplyWindowInsets(view, insets)
         }
         hideNativeStatusBar()
+    }
+
+    /**
+     * Collapses the native status bar / notification shade via the hidden StatusBarManager API.
+     * Android 12+ restricts this for apps targeting API 31+, and One UI may block it, so every failure
+     * is swallowed; GlassOS's own top-edge handling and immersive mode still apply.
+     */
+    private fun collapseNativeShade() {
+        val now = SystemClock.uptimeMillis()
+        if (now - lastCollapseAt < 250L) return
+        lastCollapseAt = now
+        try {
+            val statusBarService = getSystemService("statusbar")
+            val statusBarManager = Class.forName("android.app.StatusBarManager")
+            val collapse = statusBarManager.getMethod("collapsePanels")
+            collapse.invoke(statusBarService)
+        } catch (e: Exception) {
+            // Safe fallback if blocked by system/OEM permissions.
+        }
+        hideNativeStatusBar()
+    }
+
+    private fun registerShadeReceiver() {
+        if (shadeReceiverRegistered) return
+        @Suppress("DEPRECATION")
+        val filter = IntentFilter(Intent.ACTION_CLOSE_SYSTEM_DIALOGS)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                registerReceiver(shadeReceiver, filter, Context.RECEIVER_EXPORTED)
+            } else {
+                @Suppress("UnspecifiedRegisterReceiverFlag")
+                registerReceiver(shadeReceiver, filter)
+            }
+            shadeReceiverRegistered = true
+        } catch (e: Exception) {
+            shadeReceiverRegistered = false
+        }
+    }
+
+    private fun unregisterShadeReceiver() {
+        if (!shadeReceiverRegistered) return
+        try {
+            unregisterReceiver(shadeReceiver)
+        } catch (e: IllegalArgumentException) {
+            // Already unregistered.
+        }
+        shadeReceiverRegistered = false
     }
 
     private fun hideNativeStatusBar() {

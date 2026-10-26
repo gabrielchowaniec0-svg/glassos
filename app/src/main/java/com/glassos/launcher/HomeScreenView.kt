@@ -14,6 +14,7 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -147,6 +148,7 @@ fun GlassOSRoot(
     var settingsOpen by remember { mutableStateOf(false) }
     var menuTarget by remember { mutableStateOf<ContextMenuTarget?>(null) }
     var focusSearch by remember { mutableStateOf(false) }
+    var edgeSwipeActive by remember { mutableStateOf(false) }
 
     LaunchedEffect(settingsOpen) {
         settingsProgress.animateTo(
@@ -311,7 +313,10 @@ fun GlassOSRoot(
                                     // No blur anywhere: overlays fade the icons instead. The control
                                     // center keeps them partly visible so its glass refracts them.
                                     val overlay = when (panel.type) {
-                                        PanelType.Drawer, PanelType.Notifications -> panel.progress
+                                        PanelType.Drawer -> panel.progress
+                                        // Phones use the frosted sheet, so the icons stay in place
+                                        // below its edge; the open Fold layout fades them instead.
+                                        PanelType.Notifications -> if (isLarge) panel.progress else 0f
                                         PanelType.Quick -> panel.progress * 0.45f
                                         PanelType.None -> 0f
                                     }
@@ -387,9 +392,94 @@ fun GlassOSRoot(
                         )
                     }
                 }
+
+                // Top-edge interceptor: owns swipes that start in the top 36dp (status bar area) so
+                // they open GlassOS panels instead of reaching the native shade. It yields as soon as
+                // a panel or overlay is showing.
+                if (edgeSwipeActive || (!panel.isActive && menuTarget == null && !settingsOpen && !edge.isOpen)) {
+                    TopEdgeSwipeInterceptor(
+                        panel = panel,
+                        splitFraction = { settings.splitFraction },
+                        onActiveChange = { edgeSwipeActive = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(36.dp)
+                            .align(Alignment.TopCenter)
+                    )
+                }
             }
         }
     }
+}
+
+/**
+ * A transparent strip along the top edge. Every drag that starts here is consumed, and once it has
+ * travelled 18dp downward it opens the notification center (left part of the screen, per the split
+ * setting) or the control center (right part). The panel then follows the finger like any other pull.
+ */
+@Composable
+private fun TopEdgeSwipeInterceptor(
+    panel: PanelController,
+    splitFraction: () -> Float,
+    onActiveChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val density = LocalDensity.current
+    val configuration = LocalConfiguration.current
+    val latestActiveChange by androidx.compose.runtime.rememberUpdatedState(onActiveChange)
+    val thresholdPx = with(density) { 18.dp.toPx() }
+    val distancePx = with(density) { configuration.screenHeightDp.dp.toPx() } * 0.55f
+
+    Box(
+        modifier = modifier
+            .gestureExclusion { true }
+            .pointerInput(panel, distancePx) {
+                val tracker = VelocityTracker()
+                var startX = 0f
+                var accumulated = 0f
+                var started = false
+                detectVerticalDragGestures(
+                    onDragStart = { offset ->
+                        tracker.resetTracking()
+                        startX = offset.x
+                        accumulated = 0f
+                        started = false
+                    },
+                    onDragEnd = {
+                        if (started) {
+                            panel.endDrag(tracker.calculateVelocity().y / distancePx, opening = true)
+                        }
+                        started = false
+                        latestActiveChange(false)
+                    },
+                    onDragCancel = {
+                        if (started) panel.endDrag(0f, opening = true)
+                        started = false
+                        latestActiveChange(false)
+                    },
+                    onVerticalDrag = { change, dragAmount ->
+                        change.consume()
+                        tracker.addPointerInputChange(change)
+                        accumulated += dragAmount
+                        if (!started) {
+                            if (accumulated > thresholdPx) {
+                                started = true
+                                latestActiveChange(true)
+                                val target = if (startX < size.width * splitFraction()) {
+                                    PanelType.Notifications
+                                } else {
+                                    PanelType.Quick
+                                }
+                                panel.beginDrag(target)
+                                panel.dragBy(accumulated / distancePx)
+                            }
+                        } else {
+                            panel.dragBy(dragAmount / distancePx)
+                        }
+                    }
+                )
+            }
+    )
 }
 
 /** First-run One UI defaults, auto-adding new installs and pruning uninstalled apps. */

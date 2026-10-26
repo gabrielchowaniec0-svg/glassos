@@ -2,11 +2,16 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.NFC" />
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+    <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
+    <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
     <uses-permission
         android:name="android.permission.WRITE_SETTINGS"
         tools:ignore="ProtectedPermissions" />
@@ -20,6 +25,12 @@
     <uses-feature
         android:name="android.hardware.bluetooth"
         android:required="false" />
+    <uses-feature
+        android:name="android.hardware.telephony"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.location"
+        android:required="false" />
 
     <queries>
         <!-- Needed so PackageManager.queryIntentActivities can list every launcher icon. -->
@@ -27,12 +38,17 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
-        <!-- Samsung core apps bound explicitly in the dock. -->
+        <!-- Samsung apps bound explicitly in the dock, control center and widgets. -->
         <package android:name="com.samsung.android.dialer" />
         <package android:name="com.samsung.android.messaging" />
         <package android:name="com.sec.android.app.camera" />
         <package android:name="com.sec.android.gallery3d" />
         <package android:name="com.samsung.android.oneconnect" />
+        <package android:name="com.samsung.android.app.routines" />
+        <package android:name="com.sec.android.app.clockpackage" />
+        <package android:name="com.sec.android.app.popupcalculator" />
+        <package android:name="com.sec.android.daemonapp" />
+        <package android:name="com.sec.android.app.music" />
     </queries>
 
     <application
@@ -50,7 +66,7 @@
             android:stateNotNeeded="true"
             android:excludeFromRecents="true"
             android:resizeableActivity="true"
-            android:windowSoftInputMode="adjustPan"
+            android:windowSoftInputMode="adjustResize"
             android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation|keyboardHidden|density|uiMode">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -60,7 +76,7 @@
             </intent-filter>
         </activity>
 
-        <!-- Feeds active notifications to the glass notification tray (user grants access once). -->
+        <!-- Feeds notifications and media sessions to GlassOS (user grants access once). -->
         <service
             android:name=".GlassNotificationListener"
             android:exported="true"

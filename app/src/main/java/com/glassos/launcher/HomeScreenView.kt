@@ -478,7 +478,21 @@ private fun Modifier.shellGestures(
             // The release event can carry movement too (input is often batched), so count it.
             val delta = change.positionChange()
             if (change.changedToUpIgnoreConsumed()) {
-                if (claimed) panel.dragBy(direction * delta.y / distance)
+                if (claimed) {
+                    panel.dragBy(direction * delta.y / distance)
+                } else if (!decided && startType == PanelType.None) {
+                    // A quick flick can arrive as down + up only: treat a clear vertical one as a fling.
+                    val dx = totalDx + delta.x
+                    val dy = totalDy + delta.y
+                    if (abs(dy) > slop * 3f && abs(dy) > abs(dx) * 1.2f && !exclusions.blocks(down.position, dy)) {
+                        val target = when {
+                            dy < 0f -> PanelType.Drawer
+                            down.position.x < width * splitFraction() -> PanelType.Notifications
+                            else -> PanelType.Quick
+                        }
+                        panel.open(target)
+                    }
+                }
                 break
             }
 

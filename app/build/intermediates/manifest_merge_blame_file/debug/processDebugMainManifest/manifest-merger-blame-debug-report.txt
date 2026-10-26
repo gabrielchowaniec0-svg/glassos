@@ -1,0 +1,296 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.glassos.launcher"
+4    android:versionCode="1"
+5    android:versionName="1.0.0" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="31"
+9        android:targetSdkVersion="35" />
+10
+11    <uses-permission android:name="android.permission.INTERNET" />
+11-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:5:5-67
+11-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:5:22-64
+12    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+12-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:6:5-76
+12-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:6:22-73
+13    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+13-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:7:5-79
+13-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:7:22-76
+14    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+14-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:8:5-79
+14-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:8:22-76
+15    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+15-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:9:5-81
+15-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:9:22-78
+16    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+16-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:10:5-76
+16-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:10:22-73
+17    <uses-permission android:name="android.permission.NFC" />
+17-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:11:5-62
+17-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:11:22-59
+18    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+18-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:12:5-85
+18-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:12:22-82
+19    <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
+19-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:13:5-82
+19-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:13:22-79
+20    <!-- Needed for StatusBarManager.collapsePanels() (native shade auto-collapse). -->
+21    <uses-permission android:name="android.permission.EXPAND_STATUS_BAR" />
+21-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:15:5-76
+21-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:15:22-73
+22    <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
+22-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:16:5-78
+22-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:16:22-75
+23    <uses-permission android:name="android.permission.WRITE_SETTINGS" />
+23-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:17:5-19:47
+23-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:18:9-57
+24
+25    <uses-feature
+25-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:21:5-23:35
+26        android:name="android.hardware.touchscreen"
+26-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:22:9-52
+27        android:required="true" />
+27-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:23:9-32
+28    <uses-feature
+28-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:24:5-26:36
+29        android:name="android.hardware.nfc"
+29-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:25:9-44
+30        android:required="false" />
+30-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:26:9-33
+31    <uses-feature
+31-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:27:5-29:36
+32        android:name="android.hardware.bluetooth"
+32-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:28:9-50
+33        android:required="false" />
+33-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:29:9-33
+34    <uses-feature
+34-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:30:5-32:36
+35        android:name="android.hardware.telephony"
+35-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:31:9-50
+36        android:required="false" />
+36-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:32:9-33
+37    <uses-feature
+37-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:33:5-35:36
+38        android:name="android.hardware.location"
+38-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:34:9-49
+39        android:required="false" />
+39-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:35:9-33
+40
+41    <queries>
+41-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:37:5-54:15
+42
+43        <!-- Needed so PackageManager.queryIntentActivities can list every launcher icon. -->
+44        <intent>
+44-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:39:9-42:18
+45            <action android:name="android.intent.action.MAIN" />
+45-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:40:13-65
+45-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:40:21-62
+46
+47            <category android:name="android.intent.category.LAUNCHER" />
+47-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:41:13-73
+47-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:41:23-70
+48        </intent>
+49        <!-- Samsung apps bound explicitly in the dock, control center and widgets. -->
+50        <package android:name="com.samsung.android.dialer" />
+50-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:44:9-62
+50-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:44:18-59
+51        <package android:name="com.samsung.android.messaging" />
+51-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:45:9-65
+51-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:45:18-62
+52        <package android:name="com.sec.android.app.camera" />
+52-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:46:9-62
+52-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:46:18-59
+53        <package android:name="com.sec.android.gallery3d" />
+53-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:47:9-61
+53-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:47:18-58
+54        <package android:name="com.samsung.android.oneconnect" />
+54-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:48:9-66
+54-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:48:18-63
+55        <package android:name="com.samsung.android.app.routines" />
+55-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:49:9-68
+55-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:49:18-65
+56        <package android:name="com.sec.android.app.clockpackage" />
+56-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:50:9-68
+56-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:50:18-65
+57        <package android:name="com.sec.android.app.popupcalculator" />
+57-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:51:9-71
+57-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:51:18-68
+58        <package android:name="com.sec.android.daemonapp" />
+58-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:52:9-61
+58-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:52:18-58
+59        <package android:name="com.sec.android.app.music" />
+59-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:53:9-61
+59-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:53:18-58
+60    </queries>
+61
+62    <permission
+62-->[androidx.core:core:1.15.0] /home/runner/.gradle/caches/8.9/transforms/cd46abea9d16e862d0dfae7b2db85bca/transformed/core-1.15.0/AndroidManifest.xml:22:5-24:47
+63        android:name="com.glassos.launcher.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+63-->[androidx.core:core:1.15.0] /home/runner/.gradle/caches/8.9/transforms/cd46abea9d16e862d0dfae7b2db85bca/transformed/core-1.15.0/AndroidManifest.xml:23:9-81
+64        android:protectionLevel="signature" />
+64-->[androidx.core:core:1.15.0] /home/runner/.gradle/caches/8.9/transforms/cd46abea9d16e862d0dfae7b2db85bca/transformed/core-1.15.0/AndroidManifest.xml:24:9-44
+65
+66    <uses-permission android:name="com.glassos.launcher.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+66-->[androidx.core:core:1.15.0] /home/runner/.gradle/caches/8.9/transforms/cd46abea9d16e862d0dfae7b2db85bca/transformed/core-1.15.0/AndroidManifest.xml:26:5-97
+66-->[androidx.core:core:1.15.0] /home/runner/.gradle/caches/8.9/transforms/cd46abea9d16e862d0dfae7b2db85bca/transformed/core-1.15.0/AndroidManifest.xml:26:22-94
+67
+68    <application
+68-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:56:5-92:19
+69        android:allowBackup="true"
+69-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:57:9-35
+70        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+70-->[androidx.core:core:1.15.0] /home/runner/.gradle/caches/8.9/transforms/cd46abea9d16e862d0dfae7b2db85bca/transformed/core-1.15.0/AndroidManifest.xml:28:18-86
+71        android:debuggable="true"
+72        android:extractNativeLibs="false"
+73        android:icon="@android:drawable/sym_def_app_icon"
+73-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:58:9-58
+74        android:label="@string/app_name"
+74-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:59:9-41
+75        android:supportsRtl="true"
+75-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:60:9-35
+76        android:theme="@style/Theme.GlassOS" >
+76-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:61:9-45
+77        <activity
+77-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:64:9-79:20
+78            android:name="com.glassos.launcher.MainActivity"
+78-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:65:13-41
+79            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation|keyboardHidden|density|uiMode"
+79-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:72:13-121
+80            android:excludeFromRecents="true"
+80-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:69:13-46
+81            android:exported="true"
+81-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:66:13-36
+82            android:launchMode="singleTask"
+82-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:67:13-44
+83            android:resizeableActivity="true"
+83-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:70:13-46
+84            android:stateNotNeeded="true"
+84-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:68:13-42
+85            android:windowSoftInputMode="adjustResize" >
+85-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:71:13-55
+86            <intent-filter>
+86-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:73:13-78:29
+87                <action android:name="android.intent.action.MAIN" />
+87-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:40:13-65
+87-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:40:21-62
+88
+89                <category android:name="android.intent.category.HOME" />
+89-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:75:17-73
+89-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:75:27-70
+90                <category android:name="android.intent.category.DEFAULT" />
+90-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:76:17-76
+90-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:76:27-73
+91                <category android:name="android.intent.category.LAUNCHER" />
+91-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:41:13-73
+91-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:41:23-70
+92            </intent-filter>
+93        </activity>
+94
+95        <!-- Feeds notifications and media sessions to GlassOS (user grants access once). -->
+96        <service
+96-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:82:9-90:19
+97            android:name="com.glassos.launcher.GlassNotificationListener"
+97-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:83:13-54
+98            android:exported="true"
+98-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:84:13-36
+99            android:label="@string/app_name"
+99-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:85:13-45
+100            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" >
+100-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:86:13-87
+101            <intent-filter>
+101-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:87:13-89:29
+102                <action android:name="android.service.notification.NotificationListenerService" />
+102-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:88:17-99
+102-->/home/runner/work/glassos/glassos/app/src/main/AndroidManifest.xml:88:25-96
+103            </intent-filter>
+104        </service>
+105
+106        <uses-library
+106-->[androidx.window:window:1.3.0] /home/runner/.gradle/caches/8.9/transforms/8b4d85b054c9e64b88773af3dbd6a17b/transformed/window-1.3.0/AndroidManifest.xml:23:9-25:40
+107            android:name="androidx.window.extensions"
+107-->[androidx.window:window:1.3.0] /home/runner/.gradle/caches/8.9/transforms/8b4d85b054c9e64b88773af3dbd6a17b/transformed/window-1.3.0/AndroidManifest.xml:24:13-54
+108            android:required="false" />
+108-->[androidx.window:window:1.3.0] /home/runner/.gradle/caches/8.9/transforms/8b4d85b054c9e64b88773af3dbd6a17b/transformed/window-1.3.0/AndroidManifest.xml:25:13-37
+109        <uses-library
+109-->[androidx.window:window:1.3.0] /home/runner/.gradle/caches/8.9/transforms/8b4d85b054c9e64b88773af3dbd6a17b/transformed/window-1.3.0/AndroidManifest.xml:26:9-28:40
+110            android:name="androidx.window.sidecar"
+110-->[androidx.window:window:1.3.0] /home/runner/.gradle/caches/8.9/transforms/8b4d85b054c9e64b88773af3dbd6a17b/transformed/window-1.3.0/AndroidManifest.xml:27:13-51
+111            android:required="false" />
+111-->[androidx.window:window:1.3.0] /home/runner/.gradle/caches/8.9/transforms/8b4d85b054c9e64b88773af3dbd6a17b/transformed/window-1.3.0/AndroidManifest.xml:28:13-37
+112
+113        <activity
+113-->[androidx.compose.ui:ui-tooling-android:1.7.6] /home/runner/.gradle/caches/8.9/transforms/d4ab53c4d80d63d68ee160d2eeb8ddc0/transformed/ui-tooling-release/AndroidManifest.xml:23:9-25:39
+114            android:name="androidx.compose.ui.tooling.PreviewActivity"
+114-->[androidx.compose.ui:ui-tooling-android:1.7.6] /home/runner/.gradle/caches/8.9/transforms/d4ab53c4d80d63d68ee160d2eeb8ddc0/transformed/ui-tooling-release/AndroidManifest.xml:24:13-71
+115            android:exported="true" />
+115-->[androidx.compose.ui:ui-tooling-android:1.7.6] /home/runner/.gradle/caches/8.9/transforms/d4ab53c4d80d63d68ee160d2eeb8ddc0/transformed/ui-tooling-release/AndroidManifest.xml:25:13-36
+116
+117        <provider
+117-->[androidx.emoji2:emoji2:1.3.0] /home/runner/.gradle/caches/8.9/transforms/e9a4de5f87829d8e56de87ff35dfed60/transformed/emoji2-1.3.0/AndroidManifest.xml:24:9-32:20
+118            android:name="androidx.startup.InitializationProvider"
+118-->[androidx.emoji2:emoji2:1.3.0] /home/runner/.gradle/caches/8.9/transforms/e9a4de5f87829d8e56de87ff35dfed60/transformed/emoji2-1.3.0/AndroidManifest.xml:25:13-67
+119            android:authorities="com.glassos.launcher.androidx-startup"
+119-->[androidx.emoji2:emoji2:1.3.0] /home/runner/.gradle/caches/8.9/transforms/e9a4de5f87829d8e56de87ff35dfed60/transformed/emoji2-1.3.0/AndroidManifest.xml:26:13-68
+120            android:exported="false" >
+120-->[androidx.emoji2:emoji2:1.3.0] /home/runner/.gradle/caches/8.9/transforms/e9a4de5f87829d8e56de87ff35dfed60/transformed/emoji2-1.3.0/AndroidManifest.xml:27:13-37
+121            <meta-data
+121-->[androidx.emoji2:emoji2:1.3.0] /home/runner/.gradle/caches/8.9/transforms/e9a4de5f87829d8e56de87ff35dfed60/transformed/emoji2-1.3.0/AndroidManifest.xml:29:13-31:52
+122                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+122-->[androidx.emoji2:emoji2:1.3.0] /home/runner/.gradle/caches/8.9/transforms/e9a4de5f87829d8e56de87ff35dfed60/transformed/emoji2-1.3.0/AndroidManifest.xml:30:17-75
+123                android:value="androidx.startup" />
+123-->[androidx.emoji2:emoji2:1.3.0] /home/runner/.gradle/caches/8.9/transforms/e9a4de5f87829d8e56de87ff35dfed60/transformed/emoji2-1.3.0/AndroidManifest.xml:31:17-49
+124            <meta-data
+124-->[androidx.lifecycle:lifecycle-process:2.8.7] /home/runner/.gradle/caches/8.9/transforms/ef3f1b8cf943e0590111f6b7a018d36f/transformed/lifecycle-process-2.8.7/AndroidManifest.xml:29:13-31:52
+125                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+125-->[androidx.lifecycle:lifecycle-process:2.8.7] /home/runner/.gradle/caches/8.9/transforms/ef3f1b8cf943e0590111f6b7a018d36f/transformed/lifecycle-process-2.8.7/AndroidManifest.xml:30:17-78
+126                android:value="androidx.startup" />
+126-->[androidx.lifecycle:lifecycle-process:2.8.7] /home/runner/.gradle/caches/8.9/transforms/ef3f1b8cf943e0590111f6b7a018d36f/transformed/lifecycle-process-2.8.7/AndroidManifest.xml:31:17-49
+127            <meta-data
+127-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/4d07dd122260385b5a0f7c79a656e780/transformed/profileinstaller-1.3.1/AndroidManifest.xml:29:13-31:52
+128                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+128-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/4d07dd122260385b5a0f7c79a656e780/transformed/profileinstaller-1.3.1/AndroidManifest.xml:30:17-85
+129                android:value="androidx.startup" />
+129-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/4d07dd122260385b5a0f7c79a656e780/transformed/profileinstaller-1.3.1/AndroidManifest.xml:31:17-49
+130        </provider>
+131
+132        <receiver
+132-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/4d07dd122260385b5a0f7c79a656e780/transformed/profileinstaller-1.3.1/AndroidManifest.xml:34:9-52:20
+133            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+133-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/4d07dd122260385b5a0f7c79a656e780/transformed/profileinstaller-1.3.1/AndroidManifest.xml:35:13-76
+134            android:directBootAware="false"
+134-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/4d07dd122260385b5a0f7c79a656e780/transformed/profileinstaller-1.3.1/AndroidManifest.xml:36:13-44
+135            android:enabled="true"
+135-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/4d07dd122260385b5a0f7c79a656e780/transformed/profileinstaller-1.3.1/AndroidManifest.xml:37:13-35
+136            android:exported="true"
+136-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/4d07dd122260385b5a0f7c79a656e780/transformed/profileinstaller-1.3.1/AndroidManifest.xml:38:13-36
+137            android:permission="android.permission.DUMP" >
+137-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/4d07dd122260385b5a0f7c79a656e780/transformed/profileinstaller-1.3.1/AndroidManifest.xml:39:13-57
+138            <intent-filter>
+138-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/4d07dd122260385b5a0f7c79a656e780/transformed/profileinstaller-1.3.1/AndroidManifest.xml:40:13-42:29
+139                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+139-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/4d07dd122260385b5a0f7c79a656e780/transformed/profileinstaller-1.3.1/AndroidManifest.xml:41:17-91
+139-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/4d07dd122260385b5a0f7c79a656e780/transformed/profileinstaller-1.3.1/AndroidManifest.xml:41:25-88
+140            </intent-filter>
+141            <intent-filter>
+141-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/4d07dd122260385b5a0f7c79a656e780/transformed/profileinstaller-1.3.1/AndroidManifest.xml:43:13-45:29
+142                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+142-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/4d07dd122260385b5a0f7c79a656e780/transformed/profileinstaller-1.3.1/AndroidManifest.xml:44:17-85
+142-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/4d07dd122260385b5a0f7c79a656e780/transformed/profileinstaller-1.3.1/AndroidManifest.xml:44:25-82
+143            </intent-filter>
+144            <intent-filter>
+144-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/4d07dd122260385b5a0f7c79a656e780/transformed/profileinstaller-1.3.1/AndroidManifest.xml:46:13-48:29
+145                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+145-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/4d07dd122260385b5a0f7c79a656e780/transformed/profileinstaller-1.3.1/AndroidManifest.xml:47:17-88
+145-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/4d07dd122260385b5a0f7c79a656e780/transformed/profileinstaller-1.3.1/AndroidManifest.xml:47:25-85
+146            </intent-filter>
+147            <intent-filter>
+147-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/4d07dd122260385b5a0f7c79a656e780/transformed/profileinstaller-1.3.1/AndroidManifest.xml:49:13-51:29
+148                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+148-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/4d07dd122260385b5a0f7c79a656e780/transformed/profileinstaller-1.3.1/AndroidManifest.xml:50:17-95
+148-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/4d07dd122260385b5a0f7c79a656e780/transformed/profileinstaller-1.3.1/AndroidManifest.xml:50:25-92
+149            </intent-filter>
+150        </receiver>
+151    </application>
+152
+153</manifest>

@@ -449,6 +449,7 @@ private fun Modifier.shellGestures(
     val tracker = VelocityTracker()
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+        android.util.Log.d("GlassGesture", "down ${down.position} enabled=${enabled()} type=${panel.type}")
         if (!enabled()) return@awaitEachGesture
         tracker.resetTracking()
         tracker.addPosition(down.uptimeMillis, down.position)
@@ -469,7 +470,10 @@ private fun Modifier.shellGestures(
             val event = awaitPointerEvent(PointerEventPass.Initial)
             val change = event.changes.firstOrNull { it.id == down.id } ?: break
             tracker.addPointerInputChange(change)
-            if (change.changedToUpIgnoreConsumed()) break
+            if (change.changedToUpIgnoreConsumed()) {
+                android.util.Log.d("GlassGesture", "up decided=$decided claimed=$claimed")
+                break
+            }
             val delta = change.positionChange()
 
             if (!decided) {
@@ -478,7 +482,9 @@ private fun Modifier.shellGestures(
                 if (hypot(totalDx, totalDy) < slop) continue
                 decided = true
                 val vertical = abs(totalDy) > abs(totalDx) * 1.2f
-                if (!vertical || exclusions.blocks(down.position, totalDy)) break
+                val blocked = exclusions.blocks(down.position, totalDy)
+                android.util.Log.d("GlassGesture", "decide dx=$totalDx dy=$totalDy vertical=$vertical blocked=$blocked")
+                if (!vertical || blocked) break
 
                 when (startType) {
                     PanelType.None -> {
@@ -521,6 +527,7 @@ private fun Modifier.shellGestures(
 
         if (claimed) {
             val velocityY = tracker.calculateVelocity().y
+            android.util.Log.d("GlassGesture", "end type=${panel.type} progress=${panel.progress} v=$velocityY dir=$direction")
             panel.endDrag(direction * velocityY / distance)
         }
     }

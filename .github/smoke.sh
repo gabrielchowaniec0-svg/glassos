@@ -55,6 +55,7 @@ adb shell input swipe 200 500 200 1700 450
 shot 08_notification_center_clear 9
 
 adb logcat -d > shots/logcat.txt
+grep -E "GlassGesture|GlassPanel" shots/logcat.txt > shots/gesture.txt || true
 grep -E "Choreographer|Davey" shots/logcat.txt | grep -i -E "glassos|Skipped" | tail -20 > shots/jank.txt || true
 adb shell pidof $PKG > shots/pid.txt || echo "NOT RUNNING" > shots/pid.txt
 exit 0

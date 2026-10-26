@@ -308,8 +308,14 @@ fun GlassOSRoot(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .graphicsLayer {
-                                    val drawer = if (panel.type == PanelType.Drawer) panel.progress else 0f
-                                    val hide = max(drawer, settingsProgress.value)
+                                    // No blur anywhere: overlays fade the icons instead. The control
+                                    // center keeps them partly visible so its glass refracts them.
+                                    val overlay = when (panel.type) {
+                                        PanelType.Drawer, PanelType.Notifications -> panel.progress
+                                        PanelType.Quick -> panel.progress * 0.45f
+                                        PanelType.None -> 0f
+                                    }
+                                    val hide = max(overlay, settingsProgress.value)
                                     alpha = 1f - hide
                                     val s = 1f - 0.07f * hide
                                     scaleX = s

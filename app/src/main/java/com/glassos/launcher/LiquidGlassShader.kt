@@ -369,9 +369,10 @@ private fun buildLiquidGlassEffect(
     val width = size.width.toFloat()
     val height = size.height.toFloat()
     val minDim = min(width, height)
-    val bevel = min(20f * density, minDim * 0.42f).coerceAtLeast(2f)
-    val refraction = min(16f * density * style.refraction, minDim * 0.32f)
-    val dispersion = (0.22f * style.refraction).coerceIn(0f, 0.5f)
+    // The lens lives in a narrow rim (like iOS); the flat centre transmits the backdrop undistorted.
+    val bevel = min(13f * density, minDim * 0.24f).coerceAtLeast(2f)
+    val refraction = min(10f * density * style.refraction, minDim * 0.16f)
+    val dispersion = (0.14f * style.refraction).coerceIn(0f, 0.4f)
     val rimWidth = (1.6f * density).coerceAtLeast(1f)
 
     val shader = RuntimeShader(LIQUID_GLASS_AGSL)

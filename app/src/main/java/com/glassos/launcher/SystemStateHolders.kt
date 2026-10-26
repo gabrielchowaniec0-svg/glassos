@@ -505,7 +505,7 @@ class SystemStateHolder(context: Context) {
         }
     }
 
-    fun setBrightness(fraction: Float) {
+    fun applyBrightness(fraction: Float) {
         val value = fraction.coerceIn(0.02f, 1f)
         brightness = value
         if (Settings.System.canWrite(appContext)) {
@@ -525,7 +525,7 @@ class SystemStateHolder(context: Context) {
         }
     }
 
-    fun setVolume(fraction: Float) {
+    fun applyVolume(fraction: Float) {
         val am = audioManager ?: return
         val max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1)
         val level = (fraction.coerceIn(0f, 1f) * max).roundToInt()

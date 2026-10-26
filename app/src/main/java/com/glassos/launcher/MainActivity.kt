@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -16,14 +17,16 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.launch
 
 /**
  * GlassOS home activity. It replaces the stock launcher (CATEGORY_HOME), draws edge-to-edge, hides the
- * native status bar and renders its own liquid glass status bar, pull-down notification tray and
- * Quick Settings panel instead.
+ * native status bar and renders its own status bar, notification center, control center, apps screen,
+ * edge panel and settings - all in the same liquid glass.
  *
  * `android:configChanges` in the manifest keeps this activity alive across fold / unfold and rotation;
  * [onConfigurationChanged] forwards the new bounds to [HingeSensorManager].
@@ -32,6 +35,9 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var systemState: SystemStateHolder
     private lateinit var hingeSensorManager: HingeSensorManager
+    private lateinit var settings: LauncherSettings
+    private lateinit var media: MediaStateHolder
+    private lateinit var weather: WeatherHolder
 
     private val homePressFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private val homePressEvents: SharedFlow<Unit> = homePressFlow.asSharedFlow()
@@ -40,6 +46,18 @@ class MainActivity : ComponentActivity() {
         ActivityResultContracts.RequestMultiplePermissions()
     ) {
         systemState.refreshAll()
+    }
+
+    private val wallpaperPicker = registerForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            lifecycleScope.launch {
+                if (saveWallpaperFromUri(this@MainActivity, uri)) {
+                    settings.onPhotoWallpaperSaved()
+                }
+            }
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -51,6 +69,9 @@ class MainActivity : ComponentActivity() {
             it.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
         }
 
+        settings = LauncherSettings(this)
+        media = MediaStateHolder(this)
+        weather = WeatherHolder(this)
         systemState = SystemStateHolder(this).also { holder ->
             holder.windowBrightnessApplier = { value ->
                 val params = window.attributes
@@ -70,9 +91,17 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme(colorScheme = darkColorScheme()) {
                 GlassOSRoot(
-                    systemState = systemState,
+                    system = systemState,
                     hingeSensorManager = hingeSensorManager,
-                    homePressEvents = homePressEvents
+                    settings = settings,
+                    media = media,
+                    weather = weather,
+                    homePressEvents = homePressEvents,
+                    onPickWallpaper = {
+                        wallpaperPicker.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                        )
+                    }
                 )
             }
         }
@@ -81,11 +110,14 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         systemState.start()
+        systemState.refreshPermissions()
         hingeSensorManager.start()
+        if (systemState.notificationAccessGranted) media.start()
         hideNativeStatusBar()
     }
 
     override fun onPause() {
+        media.stop()
         hingeSensorManager.stop()
         systemState.stop()
         super.onPause()
@@ -104,7 +136,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        // Pressing Home while we are already the foreground launcher: close panels, go to page one.
+        // Pressing Home while we are already the foreground launcher: close everything, go to page one.
         if (intent.action == Intent.ACTION_MAIN && intent.hasCategory(Intent.CATEGORY_HOME)) {
             homePressFlow.tryEmit(Unit)
         }
@@ -133,8 +165,9 @@ class MainActivity : ComponentActivity() {
 
     private fun requestRuntimePermissionsIfNeeded() {
         val wanted = arrayOf(
-            Manifest.permission.BLUETOOTH_CONNECT, // connected-device name in the Bluetooth pill
-            Manifest.permission.ACCESS_FINE_LOCATION // lets Android reveal the Wi-Fi network name
+            Manifest.permission.BLUETOOTH_CONNECT, // connected-device name in the Bluetooth module
+            Manifest.permission.ACCESS_FINE_LOCATION, // Wi-Fi network name
+            Manifest.permission.ACCESS_COARSE_LOCATION // weather widget (must be requested with FINE)
         )
         val missing = wanted.filter {
             ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED

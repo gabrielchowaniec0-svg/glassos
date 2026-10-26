@@ -3,115 +3,135 @@ package com.glassos.launcher
 import android.app.PendingIntent
 import android.media.AudioManager
 import android.text.format.DateUtils
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AirplanemodeActive
+import androidx.compose.material.icons.rounded.BatterySaver
 import androidx.compose.material.icons.rounded.Bluetooth
-import androidx.compose.material.icons.rounded.BluetoothDisabled
-import androidx.compose.material.icons.rounded.BrightnessMedium
+import androidx.compose.material.icons.rounded.Calculate
+import androidx.compose.material.icons.rounded.CameraAlt
+import androidx.compose.material.icons.rounded.Cast
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DarkMode
-import androidx.compose.material.icons.rounded.Devices
-import androidx.compose.material.icons.rounded.FlashlightOff
+import androidx.compose.material.icons.rounded.DoNotDisturbOn
 import androidx.compose.material.icons.rounded.FlashlightOn
-import androidx.compose.material.icons.rounded.GraphicEq
+import androidx.compose.material.icons.rounded.LightMode
+import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Nfc
 import androidx.compose.material.icons.rounded.NotificationsActive
-import androidx.compose.material.icons.rounded.NotificationsOff
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PhoneAndroid
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.ScreenLockRotation
 import androidx.compose.material.icons.rounded.ScreenRotation
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.SignalCellularAlt
+import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.SkipPrevious
+import androidx.compose.material.icons.rounded.Timer
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Vibration
+import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Wifi
-import androidx.compose.material.icons.rounded.WifiOff
 import androidx.compose.material.icons.rounded.WifiTethering
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.min
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.platform.LocalDensity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Locale
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
-// ---------------------------------------------------------------------------------------------
+// =============================================================================================
 // Panel state machine
-// ---------------------------------------------------------------------------------------------
+// =============================================================================================
 
 enum class PanelType {
     None,
 
-    /** Opened by a swipe down on the left 60% of the screen. */
+    /** Swipe down on the left part of the screen: notification center (lock screen style). */
     Notifications,
 
-    /** Opened by a swipe down on the right 40% of the screen. */
-    Quick
-}
+    /** Swipe down on the right part of the screen: control center. */
+    Quick,
 
-/** Fraction of the screen height the panel occupies when fully open. */
-fun PanelType.heightFraction(): Float = when (this) {
-    PanelType.None -> 0f
-    PanelType.Notifications -> 0.66f
-    PanelType.Quick -> 0.84f
+    /** Swipe up on the home screen: One UI apps screen. */
+    Drawer
 }
-
-/** Space reserved above the panel for the custom status bar. */
-val PanelTopMargin: Dp = 54.dp
 
 /**
- * Owns the open/close progress shared by the pull-down gesture, the scrim, the drag handle and the
- * back button. [progress] is 0f (hidden) .. 1f (fully revealed).
+ * Open/close progress shared by gestures, buttons and back. [progress] is 0f (hidden) .. 1f (open).
+ * All motion is spring-driven and interruptible: grabbing a moving panel continues from where it is.
  */
 @Stable
 class PanelController(private val scope: CoroutineScope) {
@@ -128,27 +148,36 @@ class PanelController(private val scope: CoroutineScope) {
 
     fun beginDrag(target: PanelType) {
         animationJob?.cancel()
+        if (type != target) progress = 0f
         type = target
-        progress = 0f
+    }
+
+    /** Grab an already open (or animating) panel. */
+    fun grab() {
+        animationJob?.cancel()
     }
 
     fun dragBy(deltaFraction: Float) {
         progress = (progress + deltaFraction).coerceIn(0f, 1f)
     }
 
-    /** [velocityFractionPerSecond] is positive when the finger moves down (opening). */
-    fun endDrag(velocityFractionPerSecond: Float) {
+    /**
+     * [velocityFraction] is in "panels per second", positive towards open. A slow drag toggles the
+     * panel once it has travelled 30% of the way ([opening] tells which way the drag started).
+     */
+    fun endDrag(velocityFraction: Float, opening: Boolean) {
         val open = when {
-            velocityFractionPerSecond > 1.5f -> true
-            velocityFractionPerSecond < -1.5f -> false
-            else -> progress > 0.5f
+            velocityFraction > 1.1f -> true
+            velocityFraction < -1.1f -> false
+            opening -> progress > 0.3f
+            else -> progress > 0.7f
         }
         settle(open)
     }
 
     fun open(target: PanelType) {
         animationJob?.cancel()
-        if (type == PanelType.None) progress = 0f
+        if (type != target) progress = 0f
         type = target
         settle(true)
     }
@@ -158,16 +187,19 @@ class PanelController(private val scope: CoroutineScope) {
         settle(false)
     }
 
+    fun closeImmediately() {
+        animationJob?.cancel()
+        progress = 0f
+        type = PanelType.None
+    }
+
     private fun settle(open: Boolean) {
         animationJob?.cancel()
         animationJob = scope.launch {
             animate(
                 initialValue = progress,
                 targetValue = if (open) 1f else 0f,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioNoBouncy,
-                    stiffness = Spring.StiffnessMediumLow
-                )
+                animationSpec = spring(dampingRatio = 0.86f, stiffness = 320f)
             ) { value, _ ->
                 progress = value.coerceIn(0f, 1f)
             }
@@ -176,532 +208,1025 @@ class PanelController(private val scope: CoroutineScope) {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
-// Overlay container
-// ---------------------------------------------------------------------------------------------
+// =============================================================================================
+// Gesture exclusions (sliders and scrollable lists keep their own vertical drags)
+// =============================================================================================
+
+class GestureExclusions {
+
+    private class Entry(var coordinates: LayoutCoordinates?, var blocks: (Float) -> Boolean)
+
+    /** Coordinates of the node that runs the shell gestures. */
+    var root: LayoutCoordinates? = null
+
+    private val entries = HashMap<Any, Entry>()
+
+    fun register(key: Any, coordinates: LayoutCoordinates, blocks: (Float) -> Boolean) {
+        val entry = entries[key]
+        if (entry == null) {
+            entries[key] = Entry(coordinates, blocks)
+        } else {
+            entry.coordinates = coordinates
+            entry.blocks = blocks
+        }
+    }
+
+    fun unregister(key: Any) {
+        entries.remove(key)
+    }
+
+    /** True when a registered element under [position] wants a vertical drag of direction [dy]. */
+    fun blocks(position: Offset, dy: Float): Boolean {
+        val rootCoordinates = root ?: return false
+        if (!rootCoordinates.isAttached) return false
+        return entries.values.any { entry ->
+            val coordinates = entry.coordinates
+            coordinates != null && coordinates.isAttached &&
+                rootCoordinates.localBoundingBoxOf(coordinates).contains(position) &&
+                entry.blocks(dy)
+        }
+    }
+}
+
+val LocalGestureExclusions = staticCompositionLocalOf { GestureExclusions() }
+
+/** Marks this element as owning vertical drags for which [blocks] returns true. */
+fun Modifier.gestureExclusion(blocks: (dy: Float) -> Boolean = { true }): Modifier = composed {
+    val registry = LocalGestureExclusions.current
+    val key = remember { Any() }
+    val latest by rememberUpdatedState(blocks)
+    DisposableEffect(registry, key) {
+        onDispose { registry.unregister(key) }
+    }
+    onGloballyPositioned { coordinates ->
+        registry.register(key, coordinates) { dy -> latest(dy) }
+    }
+}
+
+/**
+ * Staggered entrance for panel modules: each module fades, scales up from 86% and drops in slightly
+ * after the previous one, all driven by the same spring progress (so swiping is fully interactive).
+ */
+fun Modifier.panelEntrance(progress: () -> Float, index: Int, fromTop: Boolean = true): Modifier =
+    graphicsLayer {
+        val delay = (index * 0.045f).coerceAtMost(0.5f)
+        val p = ((progress() - delay) / (1f - delay)).coerceIn(0f, 1f)
+        val eased = 1f - (1f - p) * (1f - p)
+        alpha = eased
+        val s = 0.86f + 0.14f * eased
+        scaleX = s
+        scaleY = s
+        translationY = (if (fromTop) -1f else 1f) * (1f - eased) * 56.dp.toPx()
+        transformOrigin = TransformOrigin(0.5f, if (fromTop) 0f else 1f)
+    }
+
+// =============================================================================================
+// Overlay
+// =============================================================================================
 
 @Composable
 fun PanelOverlay(
     controller: PanelController,
-    systemState: SystemStateHolder,
+    system: SystemStateHolder,
+    media: MediaStateHolder,
+    settings: LauncherSettings,
+    isLarge: Boolean,
+    onOpenLauncherSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    if (controller.type == PanelType.None && controller.progress <= 0f) return
+    val type = controller.type
+    if (type != PanelType.Notifications && type != PanelType.Quick) return
+    val progress: () -> Float = { controller.progress }
 
-    val density = LocalDensity.current
-    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
-        val rootHeightPx = constraints.maxHeight.toFloat()
-        val panelType = controller.type
-        val panelHeightPx = (rootHeightPx * panelType.heightFraction()).coerceAtLeast(1f)
-        val panelHeight = with(density) { panelHeightPx.toDp() }
-        val topMarginPx = with(density) { PanelTopMargin.toPx() }
-        val latestPanelHeightPx by rememberUpdatedState(panelHeightPx)
-
-        // Scrim: dims the blurred home screen; tapping it closes the panel.
+    Box(modifier = modifier.fillMaxSize()) {
+        // Dim only - the home screen underneath stays sharp and is refracted by the glass modules.
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer { alpha = controller.progress }
-                .background(Color.Black.copy(alpha = 0.40f))
-                .pointerInput(Unit) {
-                    detectTapGestures { controller.close() }
-                }
+                .background(Color.Black.copy(alpha = settings.panelDim))
+                .pointerInput(Unit) { detectTapGestures { controller.close() } }
         )
 
-        GlassSurface(
+        if (isLarge) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 32.dp)
+                    .padding(top = 14.dp)
+            ) {
+                NotificationCenter(
+                    system = system,
+                    media = media,
+                    progress = progress,
+                    onClose = { controller.close() },
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                )
+                Spacer(Modifier.width(32.dp))
+                ControlCenter(
+                    system = system,
+                    media = media,
+                    progress = progress,
+                    onOpenLauncherSettings = onOpenLauncherSettings,
+                    modifier = Modifier
+                        .width(420.dp)
+                        .fillMaxHeight()
+                )
+            }
+        } else if (type == PanelType.Quick) {
+            ControlCenter(
+                system = system,
+                media = media,
+                progress = progress,
+                onOpenLauncherSettings = onOpenLauncherSettings,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 18.dp)
+            )
+        } else {
+            NotificationCenter(
+                system = system,
+                media = media,
+                progress = progress,
+                onClose = { controller.close() },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 14.dp)
+            )
+        }
+    }
+}
+
+// =============================================================================================
+// Control center (iOS layout, One UI functions)
+// =============================================================================================
+
+@Composable
+fun ControlCenter(
+    system: SystemStateHolder,
+    media: MediaStateHolder,
+    progress: () -> Float,
+    onOpenLauncherSettings: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    BoxWithConstraints(modifier = modifier.padding(top = 10.dp)) {
+        val gap = 14.dp
+        val headerHeight = 96.dp
+        val unitFromWidth = (min(maxWidth, 440.dp) - gap * 3) / 4
+        val unitFromHeight = (maxHeight - headerHeight - gap * 5 - 24.dp) / 6
+        val unit = min(unitFromWidth, unitFromHeight).coerceAtLeast(52.dp)
+        val big = unit * 2 + gap
+
+        Column(
             modifier = Modifier
-                .padding(horizontal = 10.dp)
-                .offset {
-                    val hiddenShift = (1f - controller.progress) * (latestPanelHeightPx + topMarginPx)
-                    IntOffset(0, (topMarginPx - hiddenShift).roundToInt())
-                }
-                .fillMaxWidth()
-                .height(panelHeight),
-            cornerRadius = 38.dp,
-            tint = Color(0xFF0A0F2A).copy(alpha = 0.38f)
+                .align(Alignment.TopCenter)
+                .width(unit * 4 + gap * 3),
+            verticalArrangement = Arrangement.spacedBy(gap)
         ) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                Box(modifier = Modifier.weight(1f)) {
-                    when (panelType) {
-                        PanelType.Quick -> QuickSettingsContent(systemState)
-                        PanelType.Notifications -> NotificationTrayContent(
-                            systemState = systemState,
-                            onDismissPanel = { controller.close() }
-                        )
-                        PanelType.None -> Unit
+            // Top bar: edit (GlassOS settings) and system settings.
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .panelEntrance(progress, 0),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                GlassRoundButton(
+                    icon = Icons.Rounded.Add,
+                    contentDescription = "GlassOS settings",
+                    size = 40.dp,
+                    onClick = onOpenLauncherSettings
+                )
+                GlassRoundButton(
+                    icon = Icons.Rounded.Settings,
+                    contentDescription = "Settings",
+                    size = 40.dp,
+                    onClick = { system.openSettings() }
+                )
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 6.dp)
+                    .panelEntrance(progress, 0),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (system.cellular.hasTelephony) {
+                        CellularBars(level = system.cellular.level, color = Color.White)
+                        Spacer(Modifier.width(6.dp))
+                    }
+                    WifiSignalIcon(
+                        level = system.wifi.signalLevel,
+                        enabled = system.wifi.enabled,
+                        connected = system.wifi.connected,
+                        color = Color.White
+                    )
+                    val carrier = system.cellular.carrier
+                    if (carrier != null) {
+                        Spacer(Modifier.width(8.dp))
+                        GlassLabel(text = carrier, size = 13, weight = FontWeight.SemiBold)
                     }
                 }
-                PanelHandle(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(38.dp)
-                        .draggable(
-                            orientation = Orientation.Vertical,
-                            state = rememberDraggableState { delta ->
-                                controller.dragBy(delta / latestPanelHeightPx)
-                            },
-                            onDragStopped = { velocity ->
-                                controller.endDrag(velocity / latestPanelHeightPx)
-                            }
+                BatteryPill(level = system.battery.level, charging = system.battery.isCharging)
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+                ConnectivityModule(
+                    system = system,
+                    size = big,
+                    modifier = Modifier.panelEntrance(progress, 1)
+                )
+                MediaModule(
+                    media = media,
+                    system = system,
+                    size = big,
+                    modifier = Modifier.panelEntrance(progress, 2)
+                )
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+                Column(verticalArrangement = Arrangement.spacedBy(gap)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+                        GlassRoundButton(
+                            icon = if (system.autoRotate) Icons.Rounded.ScreenRotation else Icons.Rounded.ScreenLockRotation,
+                            contentDescription = "Rotation lock",
+                            size = unit,
+                            active = !system.autoRotate,
+                            onClick = { system.toggleAutoRotate() },
+                            modifier = Modifier.panelEntrance(progress, 3)
                         )
+                        GlassRoundButton(
+                            icon = if (system.ringerMode == AudioManager.RINGER_MODE_NORMAL) {
+                                Icons.Rounded.NotificationsActive
+                            } else {
+                                Icons.Rounded.Vibration
+                            },
+                            contentDescription = "Sound mode",
+                            size = unit,
+                            active = system.ringerMode != AudioManager.RINGER_MODE_NORMAL,
+                            activeColor = IosRed,
+                            onLongClick = { system.openVolumePanel() },
+                            onClick = { system.cycleRinger() },
+                            modifier = Modifier.panelEntrance(progress, 4)
+                        )
+                    }
+                    FocusPill(
+                        on = system.dndOn,
+                        width = big,
+                        height = unit,
+                        onClick = { system.toggleDnd() },
+                        onLongClick = { system.openDndAccessSettings() },
+                        modifier = Modifier.panelEntrance(progress, 5)
+                    )
+                }
+                VerticalGlassSlider(
+                    value = system.brightness,
+                    onValueChange = { system.applyBrightness(it) },
+                    icon = Icons.Rounded.LightMode,
+                    iconTint = Color(0xFFFFB800),
+                    contentDescription = "Brightness",
+                    modifier = Modifier
+                        .size(width = unit, height = big)
+                        .panelEntrance(progress, 6)
+                        .gestureExclusion()
+                )
+                VerticalGlassSlider(
+                    value = system.volume,
+                    onValueChange = { system.applyVolume(it) },
+                    icon = Icons.Rounded.VolumeUp,
+                    iconTint = IosBlue,
+                    contentDescription = "Volume",
+                    modifier = Modifier
+                        .size(width = unit, height = big)
+                        .panelEntrance(progress, 7)
+                        .gestureExclusion()
+                )
+            }
+
+            Row(
+                modifier = Modifier.panelEntrance(progress, 8),
+                horizontalArrangement = Arrangement.spacedBy(gap)
+            ) {
+                GlassRoundButton(
+                    icon = Icons.Rounded.FlashlightOn,
+                    contentDescription = "Flashlight",
+                    size = unit,
+                    active = system.flashlightOn,
+                    onClick = { system.toggleFlashlight() }
+                )
+                GlassRoundButton(
+                    icon = Icons.Rounded.Timer,
+                    contentDescription = "Timer",
+                    size = unit,
+                    onClick = { system.openTimer() }
+                )
+                GlassRoundButton(
+                    icon = Icons.Rounded.Calculate,
+                    contentDescription = "Calculator",
+                    size = unit,
+                    onClick = { system.openCalculator() }
+                )
+                GlassRoundButton(
+                    icon = Icons.Rounded.CameraAlt,
+                    contentDescription = "Camera",
+                    size = unit,
+                    onClick = { system.openCamera() }
+                )
+            }
+
+            Row(
+                modifier = Modifier.panelEntrance(progress, 9),
+                horizontalArrangement = Arrangement.spacedBy(gap)
+            ) {
+                GlassRoundButton(
+                    icon = Icons.Rounded.DarkMode,
+                    contentDescription = "Dark mode",
+                    size = unit,
+                    active = system.darkMode,
+                    onClick = { system.openDisplaySettings() }
+                )
+                GlassRoundButton(
+                    icon = Icons.Rounded.BatterySaver,
+                    contentDescription = "Power saving",
+                    size = unit,
+                    active = system.powerSaveOn,
+                    activeColor = IosYellow,
+                    onClick = { system.openPowerSaving() }
+                )
+                GlassRoundButton(
+                    icon = Icons.Rounded.Cast,
+                    contentDescription = "Smart View",
+                    size = unit,
+                    onClick = { system.openCast() }
+                )
+                GlassRoundButton(
+                    icon = Icons.Rounded.Tune,
+                    contentDescription = "Modes and Routines",
+                    size = unit,
+                    onClick = {
+                        system.launchPackage(
+                            "com.samsung.android.app.routines",
+                            android.content.Intent(android.provider.Settings.ACTION_SETTINGS)
+                        )
+                    }
                 )
             }
         }
     }
 }
 
+/** iOS connectivity cluster: three big buttons and four small ones in one glass module. */
 @Composable
-private fun PanelHandle(modifier: Modifier = Modifier) {
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        Box(
-            modifier = Modifier
-                .width(46.dp)
-                .height(5.dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.65f))
-        )
-    }
-}
-
-// ---------------------------------------------------------------------------------------------
-// One UI 9.0 style Quick Settings (single page, no tabs)
-// ---------------------------------------------------------------------------------------------
-
-private val ActiveAccent = Color(0xFF4DA3FF)
-
-private data class QuickTile(
-    val label: String,
-    val icon: ImageVector,
-    val active: Boolean,
-    val onClick: () -> Unit
-)
-
-@Composable
-private fun QuickSettingsContent(state: SystemStateHolder) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 18.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+private fun ConnectivityModule(
+    system: SystemStateHolder,
+    size: Dp,
+    modifier: Modifier = Modifier
+) {
+    GlassSurface(
+        modifier = modifier.size(size),
+        cornerRadius = size * 0.24f
     ) {
-        // Top row: Wi-Fi and Bluetooth pills with live sub-labels.
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        val pad = size * 0.085f
+        val bigSize = (size - pad * 3) / 2
+        val smallGap = bigSize * 0.12f
+        val smallSize = (bigSize - smallGap) / 2
+        Column(
+            modifier = Modifier.padding(pad),
+            verticalArrangement = Arrangement.spacedBy(pad)
         ) {
-            val wifiSubLabel = when {
-                !state.wifi.enabled -> "Off"
-                state.wifi.connected -> state.wifi.ssid ?: "Connected"
-                else -> "Not connected"
+            Row(horizontalArrangement = Arrangement.spacedBy(pad)) {
+                ClusterCircle(
+                    icon = Icons.Rounded.AirplanemodeActive,
+                    description = "Airplane mode",
+                    size = bigSize,
+                    active = system.airplaneMode,
+                    activeColor = IosOrange,
+                    onClick = { system.openAirplaneSettings() }
+                )
+                ClusterCircle(
+                    icon = Icons.Rounded.WifiTethering,
+                    description = "Mobile Hotspot",
+                    size = bigSize,
+                    active = false,
+                    activeColor = IosGreen,
+                    onClick = { system.openHotspotSettings() }
+                )
             }
-            ConnectivityPill(
-                title = "Wi-Fi",
-                subtitle = wifiSubLabel,
-                icon = if (state.wifi.enabled) Icons.Rounded.Wifi else Icons.Rounded.WifiOff,
-                active = state.wifi.enabled,
-                onClick = { state.openWifiPanel() },
-                modifier = Modifier.weight(1f)
-            )
-            val bluetoothSubLabel = when {
-                !state.bluetooth.enabled -> "Off"
-                state.bluetooth.connectedName != null -> state.bluetooth.connectedName.orEmpty()
-                else -> "On"
-            }
-            ConnectivityPill(
-                title = "Bluetooth",
-                subtitle = bluetoothSubLabel,
-                icon = if (state.bluetooth.enabled) Icons.Rounded.Bluetooth else Icons.Rounded.BluetoothDisabled,
-                active = state.bluetooth.enabled,
-                onClick = { state.openBluetoothSettings() },
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        // Middle: 4x2 grid of quick toggles.
-        val tiles = listOf(
-            QuickTile(
-                label = "Flashlight",
-                icon = if (state.flashlightOn) Icons.Rounded.FlashlightOn else Icons.Rounded.FlashlightOff,
-                active = state.flashlightOn,
-                onClick = { state.toggleFlashlight() }
-            ),
-            QuickTile(
-                label = when (state.ringerMode) {
-                    AudioManager.RINGER_MODE_NORMAL -> "Sound"
-                    AudioManager.RINGER_MODE_VIBRATE -> "Vibrate"
-                    else -> "Mute"
-                },
-                icon = when (state.ringerMode) {
-                    AudioManager.RINGER_MODE_NORMAL -> Icons.Rounded.NotificationsActive
-                    AudioManager.RINGER_MODE_VIBRATE -> Icons.Rounded.Vibration
-                    else -> Icons.Rounded.NotificationsOff
-                },
-                active = state.ringerMode == AudioManager.RINGER_MODE_NORMAL,
-                onClick = { state.toggleRinger() }
-            ),
-            QuickTile(
-                label = "Airplane",
-                icon = Icons.Rounded.AirplanemodeActive,
-                active = state.airplaneMode,
-                onClick = { state.openAirplaneSettings() }
-            ),
-            QuickTile(
-                label = "Auto rotate",
-                icon = Icons.Rounded.ScreenRotation,
-                active = state.autoRotate,
-                onClick = { state.toggleAutoRotate() }
-            ),
-            QuickTile(
-                label = "Mobile data",
-                icon = Icons.Rounded.SignalCellularAlt,
-                active = state.mobileDataEnabled,
-                onClick = { state.openInternetPanel() }
-            ),
-            QuickTile(
-                label = "Hotspot",
-                icon = Icons.Rounded.WifiTethering,
-                active = false,
-                onClick = { state.openHotspotSettings() }
-            ),
-            QuickTile(
-                label = "Dark mode",
-                icon = Icons.Rounded.DarkMode,
-                active = state.darkMode,
-                onClick = { state.openDisplaySettings() }
-            ),
-            QuickTile(
-                label = "NFC",
-                icon = Icons.Rounded.Nfc,
-                active = state.nfcEnabled,
-                onClick = { state.openNfcSettings() }
-            )
-        )
-        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            tiles.chunked(4).forEach { rowTiles ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    rowTiles.forEach { tile ->
-                        QuickToggleTile(tile = tile, modifier = Modifier.weight(1f))
+            Row(horizontalArrangement = Arrangement.spacedBy(pad)) {
+                ClusterCircle(
+                    icon = Icons.Rounded.Wifi,
+                    description = "Wi-Fi",
+                    size = bigSize,
+                    active = system.wifi.enabled,
+                    activeColor = IosBlue,
+                    onLongClick = { system.openWifiPanel() },
+                    onClick = { system.openWifiPanel() }
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(smallGap)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(smallGap)) {
+                        ClusterCircle(
+                            icon = Icons.Rounded.SignalCellularAlt,
+                            description = "Mobile data",
+                            size = smallSize,
+                            active = system.mobileDataEnabled,
+                            activeColor = IosGreen,
+                            onClick = { system.openInternetPanel() }
+                        )
+                        ClusterCircle(
+                            icon = Icons.Rounded.Bluetooth,
+                            description = "Bluetooth",
+                            size = smallSize,
+                            active = system.bluetooth.enabled,
+                            activeColor = IosBlue,
+                            onClick = { system.openBluetoothSettings() }
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(smallGap)) {
+                        ClusterCircle(
+                            icon = Icons.Rounded.Nfc,
+                            description = "NFC",
+                            size = smallSize,
+                            active = system.nfcEnabled,
+                            activeColor = IosBlue,
+                            onClick = { system.openNfcSettings() }
+                        )
+                        ClusterCircle(
+                            icon = Icons.Rounded.LocationOn,
+                            description = "Location",
+                            size = smallSize,
+                            active = system.locationOn,
+                            activeColor = IosBlue,
+                            onClick = { system.openLocationSettings() }
+                        )
                     }
                 }
             }
         }
+    }
+}
 
-        // Sliders: brightness and volume as large glass pills.
-        GlassSlider(
-            icon = Icons.Rounded.BrightnessMedium,
-            label = "Brightness",
-            value = state.brightness,
-            onValueChange = { state.applyBrightness(it) }
+@Composable
+private fun ClusterCircle(
+    icon: ImageVector,
+    description: String,
+    size: Dp,
+    active: Boolean,
+    activeColor: Color,
+    onLongClick: (() -> Unit)? = null,
+    onClick: () -> Unit
+) {
+    val fill by animateColorAsState(
+        targetValue = if (active) activeColor else Color.White.copy(alpha = 0.16f),
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "clusterFill"
+    )
+    Box(
+        modifier = Modifier
+            .size(size)
+            .glassClickable(pressedScale = 1.1f, onLongClick = onLongClick, onClick = onClick)
+            .clip(CircleShape)
+            .background(fill),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = description,
+            tint = Color.White,
+            modifier = Modifier.size(size * 0.48f)
         )
-        GlassSlider(
-            icon = Icons.Rounded.GraphicEq,
-            label = "Volume",
-            value = state.volume,
-            onValueChange = { state.applyVolume(it) }
-        )
+    }
+}
 
-        // Bottom: device control / quick tools bar.
-        GlassSurface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(76.dp),
-            cornerRadius = 38.dp,
-            contentAlignment = Alignment.Center
-        ) {
+/** Now Playing module (square). */
+@Composable
+private fun MediaModule(
+    media: MediaStateHolder,
+    system: SystemStateHolder,
+    size: Dp,
+    modifier: Modifier = Modifier
+) {
+    val info = media.info
+    GlassSurface(
+        modifier = modifier
+            .size(size)
+            .glassClickable(pressedScale = 1.03f) { media.openPlayer(system) },
+        cornerRadius = size * 0.24f
+    ) {
+        val pad = size * 0.085f
+        Column(modifier = Modifier.padding(pad)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                val artSize = size * 0.36f
+                val art = info?.artwork
+                if (art != null) {
+                    Image(
+                        bitmap = art,
+                        contentDescription = "Artwork",
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                        modifier = Modifier
+                            .size(artSize)
+                            .clip(RoundedCornerShape(artSize * 0.18f))
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(artSize)
+                            .clip(RoundedCornerShape(artSize * 0.18f))
+                            .background(Color.White.copy(alpha = 0.14f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.MusicNote,
+                            contentDescription = null,
+                            tint = Color.White.copy(alpha = 0.85f),
+                            modifier = Modifier.size(artSize * 0.5f)
+                        )
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .size(size * 0.2f)
+                        .glassClickable { system.openVolumePanel() }
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.14f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.PhoneAndroid,
+                        contentDescription = "Output",
+                        tint = Color.White,
+                        modifier = Modifier.size(size * 0.11f)
+                    )
+                }
+            }
+            Spacer(Modifier.weight(1f))
+            GlassLabel(
+                text = info?.title?.takeIf { it.isNotBlank() } ?: "Not Playing",
+                size = 15,
+                weight = FontWeight.SemiBold
+            )
+            GlassLabel(
+                text = info?.artist ?: "",
+                size = 13,
+                alpha = 0.7f
+            )
+            Spacer(Modifier.height(size * 0.04f))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                ToolButton(Icons.Rounded.Devices, "Devices") { state.openDeviceControls() }
-                ToolButton(Icons.Rounded.MusicNote, "Media") { state.openMediaOutput() }
-                ToolButton(Icons.Rounded.Settings, "Settings") { state.openSettings() }
+                MediaButton(Icons.Rounded.SkipPrevious, "Previous", size * 0.16f) { media.previous() }
+                MediaButton(
+                    if (info?.isPlaying == true) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                    "Play or pause",
+                    size * 0.2f
+                ) { media.playPause() }
+                MediaButton(Icons.Rounded.SkipNext, "Next", size * 0.16f) { media.next() }
             }
         }
     }
 }
 
 @Composable
-private fun ConnectivityPill(
-    title: String,
-    subtitle: String,
-    icon: ImageVector,
-    active: Boolean,
+private fun MediaButton(icon: ImageVector, description: String, size: Dp, onClick: () -> Unit) {
+    Icon(
+        imageVector = icon,
+        contentDescription = description,
+        tint = Color.White,
+        modifier = Modifier
+            .size(size)
+            .glassClickable(pressedScale = 1.2f, onClick = onClick)
+    )
+}
+
+/** Do Not Disturb pill (iOS "Focus"). */
+@Composable
+private fun FocusPill(
+    on: Boolean,
+    width: Dp,
+    height: Dp,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val circleFill by animateColorAsState(
+        targetValue = if (on) IosIndigo else Color.White.copy(alpha = 0.16f),
+        label = "focusFill"
+    )
     GlassSurface(
         modifier = modifier
-            .height(78.dp)
-            .squishyDeformation()
-            .clickable(onClick = onClick),
-        cornerRadius = 39.dp,
-        tint = if (active) ActiveAccent.copy(alpha = 0.30f) else Color.Transparent,
+            .size(width = width, height = height)
+            .glassClickable(pressedScale = 1.05f, onLongClick = onLongClick, onClick = onClick),
+        cornerRadius = GlassCapsule,
         contentAlignment = Alignment.CenterStart
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp),
+            modifier = Modifier.padding(horizontal = height * 0.16f),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(42.dp)
+                    .size(height * 0.68f)
                     .clip(CircleShape)
-                    .background(if (active) Color.White else Color.White.copy(alpha = 0.18f)),
+                    .background(circleFill),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = icon,
-                    contentDescription = title,
-                    tint = if (active) Color(0xFF0B1E3F) else Color.White,
-                    modifier = Modifier.size(24.dp)
+                    imageVector = if (on) Icons.Rounded.DoNotDisturbOn else Icons.Rounded.DarkMode,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(height * 0.36f)
                 )
             }
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(10.dp))
             Column {
-                Text(
-                    text = title,
-                    color = Color.White,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1
-                )
-                Text(
-                    text = subtitle,
-                    color = Color.White.copy(alpha = 0.75f),
-                    fontSize = 12.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                GlassLabel(text = "Do Not Disturb", size = 14, weight = FontWeight.SemiBold)
+                GlassLabel(text = if (on) "On" else "Off", size = 12, alpha = 0.7f)
             }
         }
     }
 }
 
-@Composable
-private fun QuickToggleTile(tile: QuickTile, modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        GlassSurface(
-            modifier = Modifier
-                .size(68.dp)
-                .squishyDeformation()
-                .clickable(onClick = tile.onClick),
-            cornerRadius = 24.dp,
-            tint = if (tile.active) ActiveAccent.copy(alpha = 0.40f) else Color.Transparent,
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = tile.icon,
-                contentDescription = tile.label,
-                tint = Color.White,
-                modifier = Modifier.size(28.dp)
-            )
-        }
-        Text(
-            text = tile.label,
-            color = Color.White.copy(alpha = 0.92f),
-            fontSize = 11.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
+// =============================================================================================
+// Notification center (lock-screen style)
+// =============================================================================================
 
 @Composable
-private fun GlassSlider(
-    icon: ImageVector,
-    label: String,
-    value: Float,
-    onValueChange: (Float) -> Unit,
+fun NotificationCenter(
+    system: SystemStateHolder,
+    media: MediaStateHolder,
+    progress: () -> Float,
+    onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val latestOnValueChange by rememberUpdatedState(onValueChange)
-    GlassSurface(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(66.dp)
-            .pointerInput(Unit) {
-                detectTapGestures { offset ->
-                    latestOnValueChange((offset.x / size.width).coerceIn(0f, 1f))
-                }
-            }
-            .pointerInput(Unit) {
-                detectHorizontalDragGestures { change, _ ->
-                    change.consume()
-                    latestOnValueChange((change.position.x / size.width).coerceIn(0f, 1f))
-                }
-            },
-        cornerRadius = 33.dp,
-        contentAlignment = Alignment.CenterStart
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxHeight()
-                .fillMaxWidth(fraction = value.coerceIn(0.04f, 1f))
-                .background(Color.White.copy(alpha = 0.40f))
-        )
-        Row(
-            modifier = Modifier.padding(horizontal = 20.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                tint = Color.White,
-                modifier = Modifier.size(26.dp)
-            )
-            Spacer(Modifier.width(12.dp))
-            Text(
-                text = label,
-                color = Color.White,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Medium
-            )
-        }
-    }
-}
-
-@Composable
-private fun ToolButton(icon: ImageVector, label: String, onClick: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .clip(CircleShape)
-            .squishyDeformation()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 18.dp, vertical = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = Color.White,
-            modifier = Modifier.size(26.dp)
-        )
-        Text(
-            text = label,
-            color = Color.White.copy(alpha = 0.9f),
-            fontSize = 11.sp
-        )
-    }
-}
-
-// ---------------------------------------------------------------------------------------------
-// Notification tray
-// ---------------------------------------------------------------------------------------------
-
-@Composable
-private fun NotificationTrayContent(
-    systemState: SystemStateHolder,
-    onDismissPanel: () -> Unit
-) {
     val notifications by NotificationRepository.items.collectAsState()
-    val hasClearable = notifications.any { it.clearable }
+    val groups = remember(notifications) {
+        notifications.groupBy { it.packageName }.values.toList()
+    }
+    var expanded by remember { mutableStateOf(setOf<String>()) }
+    val listState = rememberLazyListState()
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 18.dp)
+        modifier = modifier
+            .padding(top = 44.dp)
+            .windowInsetsPadding(WindowInsets.navigationBars)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Notifications",
-                color = Color.White,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold
+        LockScreenClock(modifier = Modifier
+            .fillMaxWidth()
+            .panelEntrance(progress, 0))
+
+        Spacer(Modifier.height(12.dp))
+
+        val nowPlaying = media.info
+        if (nowPlaying != null) {
+            NowPlayingCard(
+                info = nowPlaying,
+                media = media,
+                system = system,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .panelEntrance(progress, 1)
             )
-            if (hasClearable) {
-                GlassSurface(
-                    modifier = Modifier
-                        .height(36.dp)
-                        .clickable { NotificationRepository.dismissAll() },
-                    cornerRadius = 18.dp,
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Clear all",
-                        color = Color.White,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
-                }
-            }
+            Spacer(Modifier.height(12.dp))
         }
-        Spacer(Modifier.height(14.dp))
 
         when {
-            !systemState.notificationAccessGranted -> {
+            !system.notificationAccessGranted -> {
                 GlassSurface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { systemState.openNotificationAccessSettings() },
+                        .panelEntrance(progress, 2)
+                        .glassClickable(pressedScale = 1.03f) { system.openNotificationAccessSettings() },
                     cornerRadius = 26.dp
                 ) {
                     Column(modifier = Modifier.padding(18.dp)) {
-                        Text(
-                            text = "Allow notification access",
-                            color = Color.White,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = "Tap to let GlassOS show your notifications in this tray.",
-                            color = Color.White.copy(alpha = 0.78f),
-                            fontSize = 13.sp
+                        GlassLabel("Allow notification access", size = 16, weight = FontWeight.SemiBold)
+                        VerticalSpace(4.dp)
+                        GlassLabel(
+                            "Tap to let GlassOS show notifications and music here.",
+                            size = 13,
+                            alpha = 0.8f,
+                            maxLines = 2
                         )
                     }
                 }
+                Spacer(Modifier.weight(1f))
             }
 
-            notifications.isEmpty() -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = "No notifications",
-                        color = Color.White.copy(alpha = 0.70f),
-                        fontSize = 16.sp
-                    )
+            groups.isEmpty() -> {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .panelEntrance(progress, 2),
+                    contentAlignment = Alignment.Center
+                ) {
+                    GlassLabel("No Notifications", size = 16, weight = FontWeight.SemiBold, alpha = 0.8f)
                 }
             }
 
             else -> {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 6.dp, vertical = 4.dp)
+                        .panelEntrance(progress, 2),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    GlassLabel("Notification Centre", size = 18, weight = FontWeight.Bold)
+                    if (notifications.any { it.clearable }) {
+                        GlassSurface(
+                            modifier = Modifier
+                                .height(32.dp)
+                                .glassClickable { NotificationRepository.dismissAll() },
+                            cornerRadius = GlassCapsule,
+                            contentAlignment = Alignment.Center
+                        ) {
+                            GlassLabel(
+                                "Clear",
+                                size = 13,
+                                weight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(horizontal = 14.dp)
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
+                    state = listState,
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .gestureExclusion { dy ->
+                            (dy < 0f && listState.canScrollForward) || (dy > 0f && listState.canScrollBackward)
+                        },
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    items(items = notifications, key = { it.key }) { notification ->
-                        NotificationCard(
-                            notification = notification,
-                            onOpen = {
-                                try {
-                                    notification.contentIntent?.send()
-                                } catch (e: PendingIntent.CanceledException) {
-                                    // The owning app cancelled it; nothing to launch.
+                    groups.forEachIndexed { groupIndex, group ->
+                        val packageName = group.first().packageName
+                        val isExpanded = packageName in expanded || group.size == 1
+                        if (isExpanded) {
+                            items(items = group, key = { it.key }) { notification ->
+                                SwipeToDismiss(
+                                    enabled = notification.clearable,
+                                    onDismiss = { NotificationRepository.dismiss(notification.key) },
+                                    modifier = Modifier.panelEntrance(progress, 3 + groupIndex)
+                                ) {
+                                    NotificationCard(
+                                        notification = notification,
+                                        stackedBehind = 0,
+                                        extraCount = 0,
+                                        onClick = {
+                                            sendNotification(notification)
+                                            onClose()
+                                        }
+                                    )
                                 }
-                                onDismissPanel()
                             }
-                        )
+                            if (group.size > 1) {
+                                item(key = "collapse_$packageName") {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 8.dp),
+                                        horizontalArrangement = Arrangement.End
+                                    ) {
+                                        GlassSurface(
+                                            modifier = Modifier
+                                                .height(28.dp)
+                                                .glassClickable { expanded = expanded - packageName },
+                                            cornerRadius = GlassCapsule,
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            GlassLabel(
+                                                "Show less",
+                                                size = 12,
+                                                weight = FontWeight.SemiBold,
+                                                modifier = Modifier.padding(horizontal = 12.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            val latest = group.first()
+                            item(key = "group_$packageName") {
+                                SwipeToDismiss(
+                                    enabled = group.any { it.clearable },
+                                    onDismiss = { group.filter { it.clearable }.forEach { NotificationRepository.dismiss(it.key) } },
+                                    modifier = Modifier.panelEntrance(progress, 3 + groupIndex)
+                                ) {
+                                    NotificationCard(
+                                        notification = latest,
+                                        stackedBehind = (group.size - 1).coerceAtMost(2),
+                                        extraCount = group.size - 1,
+                                        onClick = { expanded = expanded + packageName }
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
+        }
+
+        // Lock-screen style shortcuts.
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 26.dp, vertical = 14.dp)
+                .panelEntrance(progress, 6, fromTop = false),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            GlassRoundButton(
+                icon = Icons.Rounded.FlashlightOn,
+                contentDescription = "Flashlight",
+                size = 52.dp,
+                active = system.flashlightOn,
+                onClick = { system.toggleFlashlight() }
+            )
+            GlassRoundButton(
+                icon = Icons.Rounded.CameraAlt,
+                contentDescription = "Camera",
+                size = 52.dp,
+                onClick = {
+                    system.openCamera()
+                    onClose()
+                }
+            )
+        }
+    }
+}
+
+private fun sendNotification(notification: GlassNotification) {
+    try {
+        notification.contentIntent?.send()
+    } catch (e: PendingIntent.CanceledException) {
+        // The owning app cancelled it; nothing to launch.
+    }
+}
+
+/** Big date plus liquid glass numerals, like the iOS lock screen. */
+@Composable
+private fun LockScreenClock(modifier: Modifier = Modifier) {
+    val now by rememberMinuteClock()
+    val use24Hour = rememberUse24Hour()
+    val date = remember(now) { SimpleDateFormat("EEE MMM d", Locale.getDefault()).format(now) }
+    val time = formatTime(now, use24Hour)
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        GlassLabel(date, size = 20, weight = FontWeight.SemiBold, alpha = 0.9f)
+        Box(contentAlignment = Alignment.Center) {
+            // Glass body: translucent vertical gradient.
+            Text(
+                text = time,
+                style = TextStyle(
+                    fontSize = 96.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    brush = Brush.verticalGradient(
+                        listOf(Color.White.copy(alpha = 0.78f), Color.White.copy(alpha = 0.38f))
+                    ),
+                    shadow = GlassTextShadow
+                )
+            )
+            // Specular edge: thin bright outline catching the light.
+            Text(
+                text = time,
+                style = TextStyle(
+                    fontSize = 96.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    brush = Brush.linearGradient(
+                        listOf(Color.White.copy(alpha = 0.95f), Color.White.copy(alpha = 0.25f), Color.White.copy(alpha = 0.7f))
+                    ),
+                    drawStyle = Stroke(width = 2.2f)
+                )
+            )
         }
     }
 }
 
 @Composable
-private fun NotificationCard(notification: GlassNotification, onOpen: () -> Unit) {
+private fun NowPlayingCard(
+    info: MediaInfo,
+    media: MediaStateHolder,
+    system: SystemStateHolder,
+    modifier: Modifier = Modifier
+) {
+    GlassSurface(
+        modifier = modifier
+            .height(84.dp)
+            .glassClickable(pressedScale = 1.02f) { media.openPlayer(system) },
+        cornerRadius = 28.dp,
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val art = info.artwork
+            if (art != null) {
+                Image(
+                    bitmap = art,
+                    contentDescription = "Artwork",
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    modifier = Modifier
+                        .size(58.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(58.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.White.copy(alpha = 0.14f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Rounded.MusicNote, contentDescription = null, tint = Color.White)
+                }
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                GlassLabel(info.title, size = 15, weight = FontWeight.SemiBold)
+                GlassLabel(info.artist, size = 13, alpha = 0.7f)
+            }
+            MediaButton(Icons.Rounded.SkipPrevious, "Previous", 30.dp) { media.previous() }
+            Spacer(Modifier.width(8.dp))
+            MediaButton(
+                if (info.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                "Play or pause",
+                36.dp
+            ) { media.playPause() }
+            Spacer(Modifier.width(8.dp))
+            MediaButton(Icons.Rounded.SkipNext, "Next", 30.dp) { media.next() }
+        }
+    }
+}
+
+/** Horizontal swipe to dismiss with spring snap-back. */
+@Composable
+private fun SwipeToDismiss(
+    enabled: Boolean,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    val scope = rememberCoroutineScope()
+    val offset = remember { Animatable(0f) }
+    val latestDismiss by rememberUpdatedState(onDismiss)
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                val w = size.width.coerceAtLeast(1f)
+                alpha = 1f - (abs(offset.value) / w).coerceIn(0f, 1f) * 0.8f
+            }
+            .offset { IntOffset(offset.value.roundToInt(), 0) }
+            .pointerInput(enabled) {
+                if (!enabled) return@pointerInput
+                detectHorizontalDragGestures(
+                    onDragEnd = {
+                        val w = size.width.toFloat()
+                        if (abs(offset.value) > w * 0.38f) {
+                            scope.launch {
+                                offset.animateTo(if (offset.value > 0) w * 1.2f else -w * 1.2f, tween(180))
+                                latestDismiss()
+                                offset.snapTo(0f)
+                            }
+                        } else {
+                            scope.launch {
+                                offset.animateTo(0f, spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessMedium))
+                            }
+                        }
+                    },
+                    onDragCancel = {
+                        scope.launch { offset.animateTo(0f, spring(dampingRatio = 0.6f)) }
+                    },
+                    onHorizontalDrag = { change, amount ->
+                        change.consume()
+                        scope.launch { offset.snapTo(offset.value + amount) }
+                    }
+                )
+            }
+    ) {
+        content()
+    }
+}
+
+@Composable
+private fun NotificationCard(
+    notification: GlassNotification,
+    stackedBehind: Int,
+    extraCount: Int,
+    onClick: () -> Unit
+) {
     val relativeTime = remember(notification.postTime) {
         DateUtils.getRelativeTimeSpanString(
             notification.postTime,
@@ -710,75 +1235,87 @@ private fun NotificationCard(notification: GlassNotification, onOpen: () -> Unit
             DateUtils.FORMAT_ABBREV_RELATIVE
         ).toString()
     }
-
-    GlassSurface(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onOpen),
-        cornerRadius = 26.dp
+            .padding(bottom = (7 * stackedBehind).dp)
     ) {
-        Row(
-            modifier = Modifier.padding(14.dp),
-            verticalAlignment = Alignment.Top
+        // iOS-style stack slivers peeking out below a collapsed group.
+        for (i in stackedBehind downTo 1) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .padding(horizontal = (12 * i).dp)
+                    .offset(y = (7 * i).dp)
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(Color.White.copy(alpha = 0.09f))
+            )
+        }
+        GlassSurface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .glassClickable(pressedScale = 1.02f, onClick = onClick),
+            cornerRadius = 24.dp
         ) {
-            val icon = notification.icon
-            if (icon != null) {
-                Image(
-                    bitmap = icon,
-                    contentDescription = notification.appName,
-                    modifier = Modifier
-                        .size(34.dp)
-                        .clip(CircleShape)
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .size(34.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.2f))
-                )
-            }
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "${notification.appName} • $relativeTime",
-                    color = Color.White.copy(alpha = 0.70f),
-                    fontSize = 12.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (notification.title.isNotBlank()) {
-                    Text(
-                        text = notification.title,
-                        color = Color.White,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+            Row(
+                modifier = Modifier.padding(14.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                val icon = notification.icon
+                if (icon != null) {
+                    Image(
+                        bitmap = icon,
+                        contentDescription = notification.appName,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(9.dp))
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(9.dp))
+                            .background(Color.White.copy(alpha = 0.2f))
                     )
                 }
-                if (notification.text.isNotBlank()) {
-                    Text(
-                        text = notification.text,
-                        color = Color.White.copy(alpha = 0.88f),
-                        fontSize = 13.sp,
-                        maxLines = 3,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        GlassLabel(
+                            text = notification.title.ifBlank { notification.appName },
+                            size = 15,
+                            weight = FontWeight.SemiBold,
+                            modifier = Modifier.weight(1f)
+                        )
+                        GlassLabel(text = relativeTime, size = 12, alpha = 0.65f)
+                    }
+                    if (notification.text.isNotBlank()) {
+                        Text(
+                            text = notification.text,
+                            style = glassText(TextStyle(fontSize = 14.sp)),
+                            color = Color.White.copy(alpha = 0.9f),
+                            maxLines = 4,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    if (extraCount > 0) {
+                        GlassLabel(
+                            text = "$extraCount more from ${notification.appName}",
+                            size = 12,
+                            alpha = 0.65f,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
                 }
-            }
-            if (notification.clearable) {
-                Icon(
-                    imageVector = Icons.Rounded.Close,
-                    contentDescription = "Dismiss",
-                    tint = Color.White.copy(alpha = 0.75f),
-                    modifier = Modifier
-                        .size(28.dp)
-                        .clip(CircleShape)
-                        .clickable { NotificationRepository.dismiss(notification.key) }
-                        .padding(4.dp)
-                )
             }
         }
+    }
+}
+
+/** Provides a backdrop override for a subtree (used by overlays that should refract the home screen). */
+@Composable
+fun WithBackdrop(backdrop: Backdrop, content: @Composable () -> Unit) {
+    CompositionLocalProvider(LocalBackdrop provides backdrop) {
+        content()
     }
 }

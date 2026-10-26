@@ -204,6 +204,9 @@ fun GlassOSRoot(
     val iconSize = min(cellWidth * 0.68f, 62.dp)
     val appearance = IconAppearance(settings.iconStyle, Color(settings.tintColor), settings.showLabels)
 
+    // A home screen never closes on Back. Declared first so the handler below takes priority.
+    BackHandler(enabled = true) {}
+
     BackHandler(enabled = menuTarget != null || settingsOpen || edge.isOpen || panel.isActive) {
         when {
             menuTarget != null -> menuTarget = null

@@ -395,13 +395,13 @@ private fun QuickSettingsContent(state: SystemStateHolder) {
             icon = Icons.Rounded.BrightnessMedium,
             label = "Brightness",
             value = state.brightness,
-            onValueChange = { state.setBrightness(it) }
+            onValueChange = { state.applyBrightness(it) }
         )
         GlassSlider(
             icon = Icons.Rounded.GraphicEq,
             label = "Volume",
             value = state.volume,
-            onValueChange = { state.setVolume(it) }
+            onValueChange = { state.applyVolume(it) }
         )
 
         // Bottom: device control / quick tools bar.

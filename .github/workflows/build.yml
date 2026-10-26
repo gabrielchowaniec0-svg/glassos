@@ -9,7 +9,8 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # Pinned: the ubuntu-24.04 image ships with the Android SDK preinstalled ($ANDROID_HOME).
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout Code
@@ -21,14 +22,58 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Accept Android SDK licenses
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
 
       - name: Build Debug APK
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: 8.4
-          arguments: assembleDebug
+        # Uses the project's Gradle wrapper (8.9), which the Android Gradle Plugin requires.
+        run: |
+          chmod +x gradlew
+          set -o pipefail
+          ./gradlew assembleDebug --no-daemon --console=plain 2>&1 | tee build.log
+
+      - name: Report build errors
+        if: failure()
+        run: |
+          python3 - <<'PY'
+          import os
+          lines = []
+          if os.path.exists("build.log"):
+              with open("build.log", encoding="utf-8", errors="replace") as f:
+                  raw = f.read().splitlines()
+              keep = False
+              for line in raw:
+                  if line.startswith("e: "):
+                      lines.append(line.replace("file:///home/runner/work/glassos/glassos/", ""))
+                  elif "What went wrong" in line:
+                      keep = True
+                      lines.append(line)
+                  elif keep:
+                      if line.startswith("* Try") or len(lines) > 400:
+                          keep = False
+                      else:
+                          lines.append(line)
+          if not lines:
+              lines = ["Build failed before compilation; see the job log."]
+          errors = lines
+          chunk = []
+          size = 0
+          count = 0
+          def emit(block):
+              msg = "%0A".join(s.replace("%", "%25").replace("\r", "") for s in block)
+              print("::error title=Build errors::" + msg)
+          for l in errors:
+              chunk.append(l)
+              size += len(l)
+              if size > 6000:
+                  emit(chunk)
+                  chunk, size = [], 0
+                  count += 1
+                  if count >= 9:
+                      break
+          if chunk and count < 9:
+              emit(chunk)
+          PY
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4

@@ -1194,7 +1194,7 @@ private fun EdgePanel(
                     .graphicsLayer {
                         translationX = (1f - controller.progress) * (panelWidthPx + 24.dp.toPx())
                     }
-                    .pointerInput(Unit) {
+                    .pointerInput(panelWidthPx) {
                         detectHorizontalDragGestures(
                             onDragEnd = { controller.settle() },
                             onDragCancel = { controller.settle() }
@@ -1250,7 +1250,7 @@ private fun EdgePanel(
                 .offset(y = (-90).dp)
                 .size(width = 24.dp, height = 120.dp)
                 .graphicsLayer { alpha = 1f - controller.progress }
-                .pointerInput(Unit) {
+                .pointerInput(panelWidthPx) {
                     detectHorizontalDragGestures(
                         onDragEnd = { controller.settle() },
                         onDragCancel = { controller.settle() }

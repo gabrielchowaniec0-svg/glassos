@@ -400,6 +400,7 @@ fun VerticalGlassSlider(
         label = "sliderStretch"
     )
     val fill = value.coerceIn(0f, 1f)
+    val latestFill by rememberUpdatedState(fill)
 
     GlassSurface(
         modifier = modifier
@@ -417,7 +418,7 @@ fun VerticalGlassSlider(
                 detectDragGestures(
                     onDragStart = {
                         dragging = true
-                        start = fill
+                        start = latestFill
                     },
                     onDragEnd = { dragging = false },
                     onDragCancel = { dragging = false },

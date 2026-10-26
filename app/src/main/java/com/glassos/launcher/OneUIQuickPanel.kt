@@ -161,12 +161,16 @@ class PanelController(private val scope: CoroutineScope) {
         progress = (progress + deltaFraction).coerceIn(0f, 1f)
     }
 
-    /** [velocityFraction] is in "panels per second", positive towards open. */
-    fun endDrag(velocityFraction: Float) {
+    /**
+     * [velocityFraction] is in "panels per second", positive towards open. A slow drag toggles the
+     * panel once it has travelled 30% of the way ([opening] tells which way the drag started).
+     */
+    fun endDrag(velocityFraction: Float, opening: Boolean) {
         val open = when {
             velocityFraction > 1.1f -> true
             velocityFraction < -1.1f -> false
-            else -> progress > 0.5f
+            opening -> progress > 0.3f
+            else -> progress > 0.7f
         }
         settle(open)
     }

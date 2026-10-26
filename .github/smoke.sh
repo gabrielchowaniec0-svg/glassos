@@ -7,11 +7,15 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 for p in android.permission.ACCESS_FINE_LOCATION android.permission.ACCESS_COARSE_LOCATION android.permission.BLUETOOTH_CONNECT; do
   adb shell pm grant $PKG $p || true
 done
+adb shell cmd package set-home-activity $PKG/.MainActivity || true
+adb shell am force-stop com.google.android.apps.nexuslauncher || true
+adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS || true
+adb shell settings put global hide_error_dialogs 1 || true
 adb logcat -c
 
 shot() { sleep "$2"; adb exec-out screencap -p > "shots/$1.png"; }
 
-adb shell am start -n $PKG/.MainActivity
+adb shell input keyevent KEYCODE_HOME
 shot 01_home 14
 # Control center: swipe down on the right side (below the system edge zone).
 adb shell input swipe 900 500 900 1700 1200
